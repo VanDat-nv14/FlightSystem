@@ -17,6 +17,11 @@ namespace FlightBooking.Domain.Entities.Flights
 
         public TimeSpan Duration { get; set; }
 
+        public string DistanceKm { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; }
+
+        public int EstimatedDurationMinutes { get; set; }
         // Tạm thời comment lại nếu bạn chưa viết Entity Flight
         public ICollection<Flight> Flights { get; set; } = new List<Flight>();
     }

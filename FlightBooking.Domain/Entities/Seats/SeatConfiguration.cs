@@ -15,6 +15,7 @@ namespace FlightBooking.Domain.Entities.Seats
         public Aircraft? Aircraft { get; set; }
 
         public required string SeatNumber { get; set; }
+        public decimal PriceMultiplier { get; set; } // Hệ số giá vé, có thể dùng để tính giá vé dựa trên loại ghế
         public SeatClassType ClassType { get; set; }
         public SeatPosition Position { get; set; }
     }

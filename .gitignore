@@ -1,0 +1,53 @@
+# .NET Core
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+[Dd]ebug/
+[Rr]elease/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.opensdf
+*.sdf
+*.cache
+*.pcb
+*.pcc
+*.aps
+*.spec
+*.vshost.exe
+*.vshost.exe.config
+*.vshost.exe.manifest
+*.log
+*.tlog
+*.publish.htm
+*.publishxml
+*.svclog
+*.scc
+*.vssscc
+*.dotSettings.user
+*.dotSettings
+_ReSharper*/
+
+# Frontend (Node/React)
+node_modules/
+dist/
+dist-ssr/
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.eslintcache
+
+# Other
+.DS_Store
+Thumbs.db
+scratch/
+appsettings.Development.json
