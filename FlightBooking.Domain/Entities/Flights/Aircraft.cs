@@ -16,8 +16,12 @@ namespace FlightBooking.Domain.Entities.Flights
         public int AirlineId { get; set; }
         public Airline? Airline { get; set; } // Navigation property
 
+       
+
         // Tạm thời comment lại nếu bạn chưa viết Entities cho phân hệ Seats/Flights
         public ICollection<SeatConfiguration> SeatConfigurations { get; set; } = new List<SeatConfiguration>();
         public ICollection<Flight> Flights { get; set; } = new List<Flight>();
+        public bool IsActive { get; set; }
+        public string RegistrationNumber { get; set; }
     }
 }

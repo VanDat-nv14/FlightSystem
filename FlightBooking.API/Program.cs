@@ -1,15 +1,17 @@
+using FlightBooking.API.Middlewares;
+using FlightBooking.Application.Features.Account.Interfaces;
 using FlightBooking.Application.Features.Auth.Interfaces;
+using FlightBooking.Application.Features.Flights.Interfaces;
+using FlightBooking.Infrastructure.Services;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Infrastructure.Persistence;
-using FlightBooking.Infrastructure.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using FlightBooking.Application.Features.Account.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -118,6 +120,23 @@ builder.Services.AddAuthorization();
 // ── 7. Application Services ───────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IAirportService, AirportService>();
+builder.Services.AddScoped<IAirlineService, AirlineService>();
+builder.Services.AddScoped<IAircraftService, AircraftService>();
+builder.Services.AddScoped<IRouteService, RouteService>();
+builder.Services.AddScoped<IFlightService, FlightService>();
+
+// ── 8. CORS ───────────────────────────────────────────────────────────────
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 // ── BUILD (chỉ gọi 1 lần duy nhất) ──────────────────────────────────────
 var app = builder.Build();
@@ -130,9 +149,11 @@ if (app.Environment.IsDevelopment())
         var services = scope.ServiceProvider;
         var dbContext = services.GetRequiredService<FlightBookingDbContext>();
         var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // 1. Chạy Migration (đã có)
+        // 1. Chạy Migration
         await dbContext.Database.MigrateAsync();
+
         // 2. Tạo các Role mặc định nếu chưa tồn tại
         string[] roles = { "Admin", "Employee", "Customer" };
         foreach (var roleName in roles)
@@ -142,10 +163,34 @@ if (app.Environment.IsDevelopment())
                 await roleManager.CreateAsync(new ApplicationRole { Name = roleName });
             }
         }
+
+        // 3. Tạo tài khoản Admin mặc định nếu chưa tồn tại
+        const string adminEmail = "admin@skybooking.vn";
+        const string adminPassword = "Admin@123456";
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+        if (adminUser == null)
+        {
+            adminUser = new ApplicationUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                FullName = "System Administrator",
+                Role = FlightBooking.Domain.Enums.UserRole.Admin,
+                EmailConfirmed = true
+            };
+            var createResult = await userManager.CreateAsync(adminUser, adminPassword);
+            if (createResult.Succeeded)
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
     }
 }
 
 // ── HTTP Pipeline ─────────────────────────────────────────────────────────
+// Global Exception Handler (phải đặt ĐẦU TIÊN trong pipeline)
+app.UseGlobalExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -154,6 +199,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCookiePolicy();
+
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();   // ← PHẢI trước UseAuthorization
 app.UseAuthorization();

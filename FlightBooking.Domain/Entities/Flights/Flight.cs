@@ -19,6 +19,9 @@ namespace FlightBooking.Domain.Entities.Flights
         public int? ScheduleId { get; set; }
         public DateTime DepartureTime { get; set; }
         public DateTime ArrivalTime { get; set; }
+        public decimal BasePrice { get; set; }
+
+        public string FlightNumber { get; set; } = string.Empty;
 
         public FlightStatus Status { get; set; } = FlightStatus.Scheduled;
 

@@ -18,6 +18,7 @@ namespace FlightBooking.Domain.Entities.Seats
         public SeatClassType ClassType { get; set; }
         public decimal Price { get; set; }
 
+
         public SeatStatus Status { get; set; } = SeatStatus.Available;
 
         // Concurrency Token để tránh double booking (Nhiều người mua cùng 1 ghế)

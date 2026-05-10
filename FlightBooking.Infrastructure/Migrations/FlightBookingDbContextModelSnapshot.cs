@@ -330,7 +330,14 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Model")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RegistrationNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -359,8 +366,14 @@ namespace FlightBooking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Country")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("LogoUrl")
                         .HasColumnType("nvarchar(max)");
@@ -426,11 +439,18 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Property<DateTime>("ArrivalTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DepartureTime")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("FlightNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RouteId")
                         .HasColumnType("int");
@@ -504,8 +524,18 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Property<int>("DestinationAirportId")
                         .HasColumnType("int");
 
+                    b.Property<string>("DistanceKm")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<TimeSpan>("Duration")
                         .HasColumnType("time");
+
+                    b.Property<int>("EstimatedDurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<int>("OriginAirportId")
                         .HasColumnType("int");
@@ -835,6 +865,9 @@ namespace FlightBooking.Infrastructure.Migrations
 
                     b.Property<int>("Position")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("PriceMultiplier")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("SeatNumber")
                         .IsRequired()
