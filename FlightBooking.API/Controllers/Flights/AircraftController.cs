@@ -1,4 +1,4 @@
-﻿using FlightBooking.API.Controllers.Common;
+using FlightBooking.API.Controllers.Common;
 using FlightBooking.Application.Features.Flights.DTOs;
 using FlightBooking.Application.Features.Flights.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -40,23 +40,44 @@ namespace FlightBooking.API.Controllers.Flights
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,AirlineManager")]
         public async Task<IActionResult> CreateAircraft([FromBody] CreateAircraftRequest request)
         { 
-            var aircraft = await _aircraftService.CreateAsync(request);
+            int? airlineId = null;
+            if (User.IsInRole("AirlineManager"))
+            {
+                var claim = User.FindFirst("airlineId");
+                if (claim != null) airlineId = int.Parse(claim.Value);
+            }
+            var aircraft = await _aircraftService.CreateAsync(request, airlineId);
             return OkResponse(aircraft, "Tạo máy bay thành công.");
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,AirlineManager")]
         public async Task<IActionResult> UpdateAircraft(int id, [FromBody] UpdateAircraftRequest request)
         {
-            var aircraft = await _aircraftService.UpdateAsync(id, request);
+            int? airlineId = null;
+            if (User.IsInRole("AirlineManager"))
+            {
+                var claim = User.FindFirst("airlineId");
+                if (claim != null) airlineId = int.Parse(claim.Value);
+            }
+            var aircraft = await _aircraftService.UpdateAsync(id, request, airlineId);
             return OkResponse(aircraft, "Cập nhật máy bay thành công.");
         }
+
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,AirlineManager")]
         public async Task<IActionResult> Delete(int id)
-           => OkResponse(await _aircraftService.DeleteAsync(id), "Xóa tàu bay thành công.");
+        {
+            int? airlineId = null;
+            if (User.IsInRole("AirlineManager"))
+            {
+                var claim = User.FindFirst("airlineId");
+                if (claim != null) airlineId = int.Parse(claim.Value);
+            }
+            return OkResponse(await _aircraftService.DeleteAsync(id, airlineId), "Xóa tàu bay thành công.");
+        }
     }
 }

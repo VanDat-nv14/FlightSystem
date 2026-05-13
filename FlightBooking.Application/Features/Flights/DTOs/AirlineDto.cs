@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +14,8 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string? LogoUrl { get; set; }
         public string? Country { get; set; }
         public bool IsActive { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int AircraftCount { get; set; }
     }
     public class CreateAirlineRequest
     {
@@ -28,5 +30,10 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string? LogoUrl { get; set; }
         public string? Country { get; set; }
         public bool IsActive { get; set; }
+    }
+
+    public class UpdateAirlineStatusRequest
+    {
+        public string Status { get; set; } = string.Empty; // Approved, Rejected, Suspended, Pending
     }
 }

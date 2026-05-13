@@ -29,6 +29,11 @@ export const aircraftService = {
     return response.data.data;
   },
 
+  getByAirline: async (airlineId: number): Promise<Aircraft[]> => {
+    const response = await apiClient.get<{ data: Aircraft[], message: string }>(`/Aircraft/by-airline/${airlineId}`);
+    return response.data.data;
+  },
+
   getById: async (id: number): Promise<Aircraft> => {
     const response = await apiClient.get<{ data: Aircraft, message: string }>(`/Aircraft/${id}`);
     return response.data.data;

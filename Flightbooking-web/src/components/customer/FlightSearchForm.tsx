@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Search, MapPin, Calendar, Users } from "lucide-react"
+import { Search, MapPin, Calendar, Users, ArrowLeftRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,149 +12,208 @@ import { airportService } from "../../services/airport.service"
 
 export function FlightSearchForm() {
   const navigate = useNavigate()
-  const [tripType, setTripType] = useState("round-trip")
+  const [tripType, setTripType] = useState("one-way")
   const [originId, setOriginId] = useState("")
   const [destinationId, setDestinationId] = useState("")
   const [departureDate, setDepartureDate] = useState("")
   const [returnDate, setReturnDate] = useState("")
   const [passengerCount, setPassengerCount] = useState("1")
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const today = new Date().toISOString().split("T")[0]
 
   const { data: airports = [], isLoading } = useQuery({
     queryKey: ["airports"],
     queryFn: airportService.getAll
   })
 
+  function swapAirports() {
+    const tmp = originId
+    setOriginId(destinationId)
+    setDestinationId(tmp)
+  }
+
+  function validate(): boolean {
+    const newErrors: Record<string, string> = {}
+
+    if (!originId) newErrors.origin = "Vui lòng chọn điểm khởi hành"
+    if (!destinationId) newErrors.destination = "Vui lòng chọn điểm đến"
+    if (originId && destinationId && originId === destinationId)
+      newErrors.destination = "Điểm đến không được trùng với điểm khởi hành"
+    if (!departureDate) newErrors.departureDate = "Vui lòng chọn ngày đi"
+    if (departureDate < today) newErrors.departureDate = "Ngày đi không được là ngày trong quá khứ"
+    if (tripType === "round-trip") {
+      if (!returnDate) newErrors.returnDate = "Vui lòng chọn ngày về"
+      else if (returnDate <= departureDate) newErrors.returnDate = "Ngày về phải sau ngày đi"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   function handleSearch() {
-    if (!originId || !destinationId || !departureDate) {
-      alert("Vui lòng chọn điểm đi, điểm đến và ngày khởi hành.")
-      return
-    }
-    if (originId === destinationId) {
-      alert("Điểm đi và điểm đến không được trùng nhau.")
-      return
-    }
+    if (!validate()) return
 
     const params = new URLSearchParams({
       originAirportId: originId,
       destinationAirportId: destinationId,
-      departureDate: departureDate,
-      passengerCount: passengerCount
+      departureDate,
+      passengerCount
     })
-
-    if (tripType === "round-trip" && returnDate) {
-      params.append("returnDate", returnDate)
-    }
-
+    if (tripType === "round-trip" && returnDate) params.append("returnDate", returnDate)
     navigate(`/flights?${params.toString()}`)
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-card text-card-foreground rounded-2xl shadow-xl border p-6 md:p-8 w-full max-w-5xl mx-auto"
+      className="bg-white/95 backdrop-blur-md text-card-foreground rounded-2xl shadow-2xl border border-white/20 p-6 md:p-8 w-full max-w-5xl mx-auto"
     >
-      <div className="flex flex-col space-y-6">
-        <RadioGroup 
-          value={tripType} 
-          onValueChange={setTripType}
-          className="flex space-x-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="round-trip" id="round-trip" />
-            <Label htmlFor="round-trip">Khứ hồi</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="one-way" id="one-way" />
-            <Label htmlFor="one-way">Một chiều</Label>
-          </div>
+      <div className="flex flex-col space-y-5">
+        {/* Trip type */}
+        <RadioGroup value={tripType} onValueChange={v => { setTripType(v); setErrors({}) }} className="flex gap-6">
+          {[{ value: "one-way", label: "Một chiều" }, { value: "round-trip", label: "Khứ hồi" }].map(opt => (
+            <div key={opt.value} className="flex items-center gap-2 cursor-pointer">
+              <RadioGroupItem value={opt.value} id={opt.value} />
+              <Label htmlFor={opt.value} className="cursor-pointer font-medium">{opt.label}</Label>
+            </div>
+          ))}
         </RadioGroup>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Main inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_1fr_1fr] gap-3 items-start">
           {/* Điểm đi */}
-          <div className="space-y-2">
-            <Label>Điểm khởi hành</Label>
-            <Select value={originId} onValueChange={setOriginId} disabled={isLoading}>
-              <SelectTrigger className="w-full">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Điểm khởi hành</Label>
+            <Select value={originId} onValueChange={v => { setOriginId(v); setErrors(e => ({ ...e, origin: "", destination: "" })) }} disabled={isLoading}>
+              <SelectTrigger id="origin-airport" className={`h-12 ${errors.origin ? "border-red-500" : ""}`}>
                 <div className="flex items-center gap-2 truncate">
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <SelectValue placeholder={isLoading ? "Đang tải..." : "Chọn điểm đi"} />
+                  <MapPin className="h-4 w-4 text-primary shrink-0" />
+                  <SelectValue placeholder={isLoading ? "Đang tải..." : "Chọn sân bay"} />
                 </div>
               </SelectTrigger>
               <SelectContent>
                 {airports.map(a => (
                   <SelectItem key={a.id} value={a.id.toString()}>
-                    {a.city} ({a.code}) - {a.name}
+                    <span className="font-bold mr-1">{a.code}</span> — {a.city}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.origin && <p className="text-xs text-red-500">{errors.origin}</p>}
+          </div>
+
+          {/* Swap button */}
+          <div className="flex items-end pb-1 justify-center">
+            <button
+              onClick={swapAirports}
+              className="w-10 h-10 rounded-full border-2 border-primary/30 hover:border-primary bg-white hover:bg-primary/5 flex items-center justify-center transition-all group mt-5"
+              title="Đổi chiều"
+            >
+              <ArrowLeftRight className="h-4 w-4 text-primary/60 group-hover:text-primary transition-colors" />
+            </button>
           </div>
 
           {/* Điểm đến */}
-          <div className="space-y-2">
-            <Label>Điểm đến</Label>
-            <Select value={destinationId} onValueChange={setDestinationId} disabled={isLoading}>
-              <SelectTrigger className="w-full">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Điểm đến</Label>
+            <Select value={destinationId} onValueChange={v => { setDestinationId(v); setErrors(e => ({ ...e, destination: "" })) }} disabled={isLoading}>
+              <SelectTrigger id="destination-airport" className={`h-12 ${errors.destination ? "border-red-500" : ""}`}>
                 <div className="flex items-center gap-2 truncate">
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <SelectValue placeholder={isLoading ? "Đang tải..." : "Chọn điểm đến"} />
+                  <MapPin className="h-4 w-4 text-primary shrink-0" />
+                  <SelectValue placeholder={isLoading ? "Đang tải..." : "Chọn sân bay"} />
                 </div>
               </SelectTrigger>
               <SelectContent>
                 {airports.map(a => (
                   <SelectItem key={a.id} value={a.id.toString()}>
-                    {a.city} ({a.code}) - {a.name}
+                    <span className="font-bold mr-1">{a.code}</span> — {a.city}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.destination && <p className="text-xs text-red-500">{errors.destination}</p>}
           </div>
 
-          {/* Ngày đi / Ngày về */}
-          <div className="space-y-2 md:col-span-1">
-            <Label>Ngày đi {tripType === 'round-trip' ? '- Ngày về' : ''}</Label>
-            <div className="relative flex gap-2">
-              <div className="relative flex-1">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="date" 
-                  className="pl-9" 
-                  value={departureDate}
-                  onChange={e => setDepartureDate(e.target.value)}
+          {/* Ngày đi */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Ngày đi</Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-primary pointer-events-none" />
+              <Input
+                id="departure-date"
+                type="date"
+                className={`h-12 pl-9 ${errors.departureDate ? "border-red-500" : ""}`}
+                value={departureDate}
+                min={today}
+                onChange={e => {
+                  setDepartureDate(e.target.value)
+                  // Nếu ngày về nhỏ hơn ngày đi mới, xóa ngày về
+                  if (returnDate && returnDate <= e.target.value) setReturnDate("")
+                  setErrors(err => ({ ...err, departureDate: "" }))
+                }}
+              />
+            </div>
+            {errors.departureDate && <p className="text-xs text-red-500">{errors.departureDate}</p>}
+          </div>
+
+          {/* Ngày về (only round-trip) */}
+          {tripType === "round-trip" ? (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Ngày về</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-primary pointer-events-none" />
+                <Input
+                  id="return-date"
+                  type="date"
+                  className={`h-12 pl-9 ${errors.returnDate ? "border-red-500" : ""}`}
+                  value={returnDate}
+                  min={departureDate || today}
+                  onChange={e => { setReturnDate(e.target.value); setErrors(err => ({ ...err, returnDate: "" })) }}
                 />
               </div>
-              {tripType === 'round-trip' && (
-                <div className="relative flex-1">
-                  <Input 
-                    type="date" 
-                    value={returnDate}
-                    onChange={e => setReturnDate(e.target.value)}
-                  />
-                </div>
-              )}
+              {errors.returnDate && <p className="text-xs text-red-500">{errors.returnDate}</p>}
             </div>
-          </div>
+          ) : (
+            /* Hành khách khi 1 chiều */
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Hành khách</Label>
+              <div className="relative">
+                <Users className="absolute left-3 top-3.5 h-4 w-4 text-primary pointer-events-none" />
+                <Input
+                  id="passenger-count"
+                  type="number" min="1" max="9"
+                  className="h-12 pl-9"
+                  value={passengerCount}
+                  onChange={e => setPassengerCount(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Hành khách */}
-          <div className="space-y-2">
-            <Label>Hành khách</Label>
+        {/* Hành khách riêng khi khứ hồi */}
+        {tripType === "round-trip" && (
+          <div className="w-40 space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Hành khách</Label>
             <div className="relative">
-              <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="number" 
-                min="1" max="9"
-                className="pl-9" 
+              <Users className="absolute left-3 top-3.5 h-4 w-4 text-primary pointer-events-none" />
+              <Input
+                id="passenger-count-roundtrip"
+                type="number" min="1" max="9"
+                className="h-12 pl-9"
                 value={passengerCount}
                 onChange={e => setPassengerCount(e.target.value)}
               />
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="flex justify-end pt-4">
-          <Button size="lg" className="w-full md:w-auto px-8 gap-2" onClick={handleSearch}>
+        {/* Search button */}
+        <div className="flex justify-end">
+          <Button id="search-flights-btn" size="lg" className="px-10 h-12 gap-2 bg-primary hover:bg-primary/90 shadow-lg" onClick={handleSearch}>
             <Search className="w-4 h-4" />
             Tìm chuyến bay
           </Button>

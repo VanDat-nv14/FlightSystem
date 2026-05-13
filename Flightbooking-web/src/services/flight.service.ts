@@ -30,9 +30,23 @@ export interface UpdateFlightRequest {
   status: string;
 }
 
+export interface FlightSeat {
+  id: number;
+  flightId: number;
+  seatNumber: string;
+  classType: number; // 0: Economy, 1: Business, 2: FirstClass
+  status: number; // 0: Available, 1: Booked, 2: Reserved, 3: Blocked
+  price: number;
+}
+
 export const flightService = {
   getAll: async (): Promise<Flight[]> => {
     const response = await apiClient.get<{ data: Flight[], message: string }>('/Flight');
+    return response.data.data;
+  },
+
+  getByAirline: async (airlineId: number): Promise<Flight[]> => {
+    const response = await apiClient.get<{ data: Flight[], message: string }>(`/Flight/by-airline/${airlineId}`);
     return response.data.data;
   },
 
@@ -43,6 +57,11 @@ export const flightService = {
 
   getById: async (id: number): Promise<Flight> => {
     const response = await apiClient.get<{ data: Flight, message: string }>(`/Flight/${id}`);
+    return response.data.data;
+  },
+
+  getSeats: async (flightId: number): Promise<FlightSeat[]> => {
+    const response = await apiClient.get<{ data: FlightSeat[], message: string }>(`/Flight/${flightId}/seats`);
     return response.data.data;
   },
 

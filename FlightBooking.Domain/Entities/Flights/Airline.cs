@@ -1,4 +1,4 @@
-﻿using FlightBooking.Domain.Common;
+using FlightBooking.Domain.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +15,7 @@ namespace FlightBooking.Domain.Entities.Flights
         public string? Country { get; set; }
 
         public bool IsActive { get; set; }
+        public FlightBooking.Domain.Enums.AirlineStatus Status { get; set; } = FlightBooking.Domain.Enums.AirlineStatus.Pending;
 
         // Navigation Properties
         public ICollection<Aircraft>? Aircrafts { get; set; }

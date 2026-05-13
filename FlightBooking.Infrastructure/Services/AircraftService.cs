@@ -69,8 +69,13 @@ namespace FlightBooking.Infrastructure.Services
                 }).ToListAsync();
         }
 
-        public async Task<AircraftDto> CreateAsync(CreateAircraftRequest request)
+        public async Task<AircraftDto> CreateAsync(CreateAircraftRequest request, int? currentAirlineId = null)
         {
+            if (currentAirlineId.HasValue && request.AirlineId != currentAirlineId.Value)
+            {
+                throw new BadRequestException("Bạn không thể tạo máy bay cho hãng khác.");
+            }
+
             var airlineExists = await _context.Airlines.AnyAsync(a => a.Id == request.AirlineId);
             if (!airlineExists) throw new NotFoundException("Airline", request.AirlineId);
 
@@ -91,10 +96,16 @@ namespace FlightBooking.Infrastructure.Services
             return await GetByIdAsync(aircraft.Id);
         }
 
-        public async Task<bool> UpdateAsync(int id, UpdateAircraftRequest request)
+        public async Task<bool> UpdateAsync(int id, UpdateAircraftRequest request, int? currentAirlineId = null)
         {
             var aircraft = await _context.Aircrafts.FindAsync(id)
                 ?? throw new NotFoundException("Aircraft", id);
+            
+            if (currentAirlineId.HasValue && aircraft.AirlineId != currentAirlineId.Value)
+            {
+                throw new BadRequestException("Bạn không thể chỉnh sửa máy bay của hãng khác.");
+            }
+
             aircraft.Model = request.Model;
             aircraft.TotalSeats = request.TotalSeats;
             aircraft.IsActive = request.IsActive;
@@ -102,10 +113,16 @@ namespace FlightBooking.Infrastructure.Services
             return true;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, int? currentAirlineId = null)
         {
             var aircraft = await _context.Aircrafts.FindAsync(id)
                 ?? throw new NotFoundException("Aircraft", id);
+
+            if (currentAirlineId.HasValue && aircraft.AirlineId != currentAirlineId.Value)
+            {
+                throw new BadRequestException("Bạn không thể xóa máy bay của hãng khác.");
+            }
+
             var hasFlights = await _context.Flights.AnyAsync(f => f.AircraftId == id);
             if (hasFlights) throw new BadRequestException("Không thể xóa tàu bay đang có lịch bay.");
             _context.Aircrafts.Remove(aircraft);

@@ -41,6 +41,8 @@ export default function LoginPage() {
       // Chuyển hướng dựa trên Role
       if (data.user.role === "Admin" || data.user.role === "Employee") {
         navigate("/admin")
+      } else if (data.user.role === "AirlineManager") {
+        navigate("/partner")
       } else {
         navigate("/")
       }
@@ -175,12 +177,20 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <p className="text-center text-sm text-muted-foreground">
-              Chưa có tài khoản?{" "}
-              <Link to="/register" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
-                Đăng ký ngay
-              </Link>
-            </p>
+            <div className="space-y-2 text-center text-sm text-muted-foreground">
+              <p>
+                Chưa có tài khoản?{" "}
+                <Link to="/register" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
+                  Đăng ký ngay
+                </Link>
+              </p>
+              <p>
+                Trở thành đối tác?{" "}
+                <Link to="/partner-register" className="font-semibold text-primary hover:underline underline-offset-4 transition-all">
+                  Đăng ký Hãng bay
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </motion.div>

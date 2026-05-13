@@ -19,6 +19,11 @@ export const authService = {
     return response.data.data;
   },
 
+  registerPartner: async (data: any): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>('/Auth/register-partner', data);
+    return response.data;
+  },
+
   loginWithGoogle: () => {
     // Chuyển hướng người dùng sang endpoint xác thực của backend
     window.location.href = `${import.meta.env.VITE_API_BASE_URL}/Auth/login-google`;

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit2, Trash2, Search, X, Check, Plane, Calendar, Tag, ArrowRight } from "lucide-react"
+import { Plus, Edit2, Trash2, Search, X, Check, Plane, Calendar, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

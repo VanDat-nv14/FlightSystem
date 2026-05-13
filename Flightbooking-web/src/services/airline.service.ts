@@ -4,8 +4,11 @@ export interface Airline {
   id: number;
   name: string;
   code: string;
-  country: string;
+  country?: string;
   logoUrl?: string;
+  isActive: boolean;
+  status: string; // Pending | Approved | Rejected | Suspended
+  aircraftCount: number;
 }
 
 export const airlineService = {
@@ -17,5 +20,10 @@ export const airlineService = {
   getById: async (id: number): Promise<Airline> => {
     const response = await apiClient.get<{ data: Airline, message: string }>(`/Airline/${id}`);
     return response.data.data;
+  },
+
+  updateStatus: async (id: number, status: string): Promise<void> => {
+    await apiClient.patch(`/Airline/${id}/status`, { status });
   }
 };
+

@@ -8,6 +8,8 @@ export interface UserListItem {
   role: string;
   createdAt: string;
   isLocked: boolean;
+  airlineId?: number;
+  airlineName?: string;
 }
 
 export interface CreateUserRequest {
@@ -16,12 +18,14 @@ export interface CreateUserRequest {
   phoneNumber?: string;
   password: string;
   role: string;
+  airlineId?: number;
 }
 
 export interface UpdateUserRequest {
   fullName: string;
   phoneNumber?: string;
   role: string;
+  airlineId?: number;
 }
 
 export const userService = {

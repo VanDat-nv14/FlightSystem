@@ -1,4 +1,4 @@
-﻿using FlightBooking.Domain.Entities.Bookings;
+using FlightBooking.Domain.Entities.Bookings;
 using FlightBooking.Domain.Entities.Loyalty;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Domain.Enums;
@@ -17,11 +17,13 @@ namespace FlightBooking.Domain.Entities.Users
         public UserRole Role { get; set; } = UserRole.Customer;
         public DateTime CreateAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
+        public int? AirlineId { get; set; }
 
         // Navigation properties
         public UserProfile? UserProfile { get; set; }
         public UserPreferences? UserPreferences { get; set; }
         public LoyaltyAccount? LoyaltyAccount { get; set; }
+        public FlightBooking.Domain.Entities.Flights.Airline? Airline { get; set; }
 
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public ICollection<Passenger> Passengers { get; set; } = new List<Passenger>();

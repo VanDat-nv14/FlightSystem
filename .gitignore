@@ -1,18 +1,16 @@
 # .NET Core
-bin/
-obj/
+**/bin/
+**/obj/
 *.user
 *.userosscache
 *.sln.docstates
+appsettings.Development.json
 
 # Visual Studio
 .vs/
 [Dd]ebug/
 [Rr]elease/
 *.suo
-*.user
-*.userosscache
-*.sln.docstates
 *.opensdf
 *.sdf
 *.cache
@@ -35,9 +33,9 @@ obj/
 _ReSharper*/
 
 # Frontend (Node/React)
-node_modules/
-dist/
-dist-ssr/
+**/node_modules/
+**/dist/
+**/dist-ssr/
 *.log
 .env
 .env.local
@@ -50,4 +48,3 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 scratch/
-appsettings.Development.json

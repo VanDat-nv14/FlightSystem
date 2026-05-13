@@ -1,4 +1,4 @@
-﻿using FlightBooking.Application.Features.Flights.DTOs;
+using FlightBooking.Application.Features.Flights.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +13,7 @@ namespace FlightBooking.Application.Features.Flights.Interfaces
         Task<AirlineDto> GetByIdAsync(int id);
         Task<AirlineDto> CreateAsync(CreateAirlineRequest request);
         Task<bool> UpdateAsync(int id, UpdateAirlineRequest request);
+        Task<bool> UpdateStatusAsync(int id, UpdateAirlineStatusRequest request);
         Task<bool> DeleteAsync(int id);
     }
 }

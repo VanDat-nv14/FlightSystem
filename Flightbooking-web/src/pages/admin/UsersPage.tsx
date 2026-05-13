@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit2, Trash2, Lock, Unlock, Search, X, Check } from "lucide-react"
+import { Plus, Edit2, Trash2, Lock, Unlock, Search, X, Check, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,12 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { userService, type UserListItem, type CreateUserRequest, type UpdateUserRequest } from "../../services/user.service"
+import { airlineService } from "../../services/airline.service"
 
-const ROLES = ["Admin", "Employee", "Customer"]
+const ROLES = ["Admin", "AirlineManager", "Employee", "Customer"]
 
 function getRoleBadgeVariant(role: string): "default" | "secondary" | "destructive" | "outline" {
   if (role === "Admin") return "destructive"
-  if (role === "Employee") return "default"
+  if (role === "AirlineManager") return "default"
+  if (role === "Employee") return "outline"
   return "secondary"
 }
 
@@ -32,23 +34,31 @@ function UserModal({ mode, user, onClose, onSave, isSaving }: UserModalProps) {
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? "")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState(user?.role ?? "Customer")
+  const [airlineId, setAirlineId] = useState<string>(user?.airlineId?.toString() ?? "none")
+
+  const { data: airlines = [] } = useQuery({
+    queryKey: ["airlines"],
+    queryFn: airlineService.getAll,
+  })
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const selectedAirlineId = role === "AirlineManager" && airlineId !== "none" ? parseInt(airlineId) : undefined
+    
     if (mode === "create") {
-      onSave({ fullName, email, phoneNumber, password, role } as CreateUserRequest)
+      onSave({ fullName, email, phoneNumber, password, role, airlineId: selectedAirlineId } as CreateUserRequest)
     } else {
-      onSave({ fullName, phoneNumber, role } as UpdateUserRequest)
+      onSave({ fullName, phoneNumber, role, airlineId: selectedAirlineId } as UpdateUserRequest)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-card rounded-2xl shadow-xl p-8 w-full max-w-md border"
+        className="bg-card rounded-2xl shadow-xl p-8 w-full max-w-md border max-h-[90vh] overflow-y-auto"
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">{mode === "create" ? "Thêm người dùng mới" : "Chỉnh sửa người dùng"}</h2>
@@ -88,7 +98,32 @@ function UserModal({ mode, user, onClose, onSave, isSaving }: UserModalProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-3 pt-2">
+
+          {role === "AirlineManager" && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="space-y-2"
+            >
+              <Label>Hãng hàng không liên kết</Label>
+              <Select value={airlineId} onValueChange={setAirlineId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn hãng bay..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">-- Không chọn --</SelectItem>
+                  {airlines.map(a => (
+                    <SelectItem key={a.id} value={a.id.toString()}>{a.name} ({a.code})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Building2 className="w-3 h-3" /> Tài khoản này sẽ chỉ quản lý dữ liệu của hãng được chọn.
+              </p>
+            </motion.div>
+          )}
+
+          <div className="flex gap-3 pt-4 border-t">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Hủy</Button>
             <Button type="submit" className="flex-1 gap-2" disabled={isSaving}>
               {isSaving ? "Đang lưu..." : <><Check className="w-4 h-4" /> Lưu</>}
@@ -107,24 +142,43 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
 
-  const { data: users = [], isLoading, error } = useQuery({
+  const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: userService.getAll,
   })
 
   const createMutation = useMutation({
     mutationFn: (data: CreateUserRequest) => userService.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-users"] }); setModalMode(null) },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      setModalMode(null)
+      alert("Thành công: Đã tạo người dùng mới.")
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Không thể tạo người dùng.")
+    }
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserRequest }) => userService.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-users"] }); setModalMode(null); setEditingUser(null) },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      setModalMode(null)
+      setEditingUser(null)
+      alert("Thành công: Đã cập nhật thông tin người dùng.")
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Không thể cập nhật.")
+    }
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => userService.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-users"] }); setDeleteConfirmId(null) },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      setDeleteConfirmId(null)
+      alert("Đã xóa: Người dùng đã được xóa khỏi hệ thống.")
+    },
   })
 
   const toggleLockMutation = useMutation({
@@ -134,7 +188,8 @@ export default function UsersPage() {
 
   const filtered = users.filter(u =>
     u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    (u.airlineName ?? "").toLowerCase().includes(search.toLowerCase())
   )
 
   function handleSave(data: CreateUserRequest | UpdateUserRequest) {
@@ -148,7 +203,10 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">Quản lý người dùng</h2>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Quản lý người dùng</h2>
+          <p className="text-muted-foreground text-sm mt-1">Quản lý tài khoản, phân quyền và liên kết hãng bay.</p>
+        </div>
         <Button className="gap-2" onClick={() => setModalMode("create")}>
           <Plus className="w-4 h-4" /> Thêm người dùng
         </Button>
@@ -157,7 +215,7 @@ export default function UsersPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm kiếm theo tên, email..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Tìm kiếm theo tên, email, hãng bay..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Badge variant="outline" className="text-sm">{filtered.length} người dùng</Badge>
       </div>
@@ -168,19 +226,13 @@ export default function UsersPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         )}
-        {error && (
-          <div className="p-8 text-center text-muted-foreground">
-            Lỗi tải dữ liệu. Vui lòng thử lại.
-          </div>
-        )}
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
               <TableHead>Họ và tên</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Điện thoại</TableHead>
+              <TableHead>Email / Phone</TableHead>
               <TableHead>Vai trò</TableHead>
+              <TableHead>Hãng liên kết</TableHead>
               <TableHead>Ngày tạo</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
@@ -189,19 +241,33 @@ export default function UsersPage() {
           <TableBody>
             {filtered.length === 0 && !isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                   Không có người dùng nào.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map(user => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">#{user.id}</TableCell>
-                  <TableCell className="font-medium">{user.fullName}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
-                  <TableCell>{user.phoneNumber || "—"}</TableCell>
+                <TableRow key={user.id} className="group">
+                  <TableCell>
+                    <div className="font-medium">{user.fullName}</div>
+                    <div className="font-mono text-[10px] text-muted-foreground">ID: #{user.id}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{user.email}</div>
+                    <div className="text-xs text-muted-foreground">{user.phoneNumber || "—"}</div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {user.airlineName ? (
+                      <div className="flex items-center gap-2 text-sm text-primary font-medium">
+                        <Building2 className="w-3.5 h-3.5" />
+                        {user.airlineName}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString("vi-VN")}
@@ -216,32 +282,35 @@ export default function UsersPage() {
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="outline" size="icon"
+                        className="h-8 w-8"
                         title="Chỉnh sửa"
                         onClick={() => { setEditingUser(user); setModalMode("edit") }}
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5" />
                       </Button>
                       <Button
                         variant="outline" size="icon"
+                        className="h-8 w-8"
                         title={user.isLocked ? "Mở khóa" : "Khóa"}
                         onClick={() => toggleLockMutation.mutate(user.id)}
                       >
-                        {user.isLocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                        {user.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                       </Button>
                       {deleteConfirmId === user.id ? (
                         <div className="flex gap-1">
-                          <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(user.id)}>
+                          <Button variant="destructive" size="sm" className="h-8" onClick={() => deleteMutation.mutate(user.id)}>
                             Xóa
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmId(null)}>Hủy</Button>
+                          <Button variant="ghost" size="sm" className="h-8" onClick={() => setDeleteConfirmId(null)}>Hủy</Button>
                         </div>
                       ) : (
                         <Button
                           variant="destructive" size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Xóa"
                           onClick={() => setDeleteConfirmId(user.id)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       )}
                     </div>

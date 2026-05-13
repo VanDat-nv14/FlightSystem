@@ -1,10 +1,11 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom"
-import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut } from "lucide-react"
+import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut, Building2 } from "lucide-react"
 import { useAuthStore } from "../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, to: "/admin" },
+  { name: "Hãng bay", icon: Building2, to: "/admin/airlines" },
   { name: "Chuyến bay", icon: Plane, to: "/admin/flights" },
   { name: "Tuyến bay", icon: Ticket, to: "/admin/routes" },
   { name: "Sân bay", icon: Plane, to: "/admin/airports" },

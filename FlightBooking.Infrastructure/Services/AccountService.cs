@@ -79,7 +79,9 @@ namespace FlightBooking.Infrastructure.Services
 
         public async Task<List<UserListItem>> GetAllUsersAsync()
         {
-            var users = await _context.Users.ToListAsync();
+            var users = await _context.Users
+                .Include(u => u.Airline)
+                .ToListAsync();
             return users.Select(u => new UserListItem
             {
                 Id = u.Id,
@@ -88,7 +90,9 @@ namespace FlightBooking.Infrastructure.Services
                 PhoneNumber = u.PhoneNumber,
                 Role = u.Role.ToString(),
                 CreatedAt = u.CreateAt,
-                IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow
+                IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow,
+                AirlineId = u.AirlineId,
+                AirlineName = u.Airline?.Name
             }).OrderBy(u => u.Id).ToList();
         }
 
@@ -108,7 +112,8 @@ namespace FlightBooking.Infrastructure.Services
                 FullName = request.FullName,
                 PhoneNumber = request.PhoneNumber,
                 Role = roleEnum,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                AirlineId = roleEnum == UserRole.AirlineManager ? request.AirlineId : null
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
@@ -125,7 +130,8 @@ namespace FlightBooking.Infrastructure.Services
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role.ToString(),
                 CreatedAt = user.CreateAt,
-                IsLocked = false
+                IsLocked = false,
+                AirlineId = user.AirlineId
             };
         }
 
@@ -142,6 +148,7 @@ namespace FlightBooking.Infrastructure.Services
             user.FullName = request.FullName;
             user.PhoneNumber = request.PhoneNumber;
             user.Role = roleEnum;
+            user.AirlineId = roleEnum == UserRole.AirlineManager ? request.AirlineId : null;
             user.UpdatedAt = DateTime.Now;
 
             // Cập nhật Identity Role nếu thay đổi

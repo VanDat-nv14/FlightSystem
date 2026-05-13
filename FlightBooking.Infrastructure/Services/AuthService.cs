@@ -3,6 +3,7 @@ using FlightBooking.Application.Features.Auth.DTOs;
 using FlightBooking.Application.Features.Auth.Interfaces;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Domain.Enums;
+using FlightBooking.Domain.Entities.Flights;
 using FlightBooking.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -56,11 +57,76 @@ namespace FlightBooking.Infrastructure.Services
             return await GenerateAuthResponse(user);
         }
 
+        public async Task<AuthResponse> RegisterPartnerAsync(PartnerRegisterRequest request)
+        {
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUser != null)
+                throw new BadRequestException("Email này đã được đăng ký.");
+
+            var existingAirline = await _context.Airlines.FirstOrDefaultAsync(a => a.Code == request.AirlineCode);
+            if (existingAirline != null)
+                throw new BadRequestException("Mã Hãng bay này đã tồn tại trong hệ thống.");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var airline = new Airline
+                {
+                    Name = request.AirlineName,
+                    Code = request.AirlineCode,
+                    Country = request.Country,
+                    Status = AirlineStatus.Pending,
+                    IsActive = false
+                };
+                _context.Airlines.Add(airline);
+                await _context.SaveChangesAsync();
+
+                var user = new ApplicationUser
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber,
+                    Role = UserRole.AirlineManager,
+                    AirlineId = airline.Id,
+                    EmailConfirmed = true
+                };
+
+                var result = await _userManager.CreateAsync(user, request.Password);
+                if (!result.Succeeded)
+                    throw new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description)));
+
+                await _userManager.AddToRoleAsync(user, "AirlineManager");
+
+                await transaction.CommitAsync();
+
+                return new AuthResponse { AccessToken = string.Empty, RefreshToken = string.Empty, User = null! };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
         {
-            var user = await _userManager.FindByEmailAsync(request.Email);
+            var user = await _context.Users
+                .Include(u => u.Airline)
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+
             if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
                 throw new BadRequestException("Email hoặc mật khẩu không đúng.");
+
+            if (user.Role == UserRole.AirlineManager && user.Airline != null && user.Airline.Status != AirlineStatus.Approved)
+            {
+                if (user.Airline.Status == AirlineStatus.Pending)
+                    throw new BadRequestException("Tài khoản Hãng bay đang chờ Admin phê duyệt.");
+                if (user.Airline.Status == AirlineStatus.Suspended)
+                    throw new BadRequestException("Hãng bay đã bị đình chỉ hoạt động.");
+                if (user.Airline.Status == AirlineStatus.Rejected)
+                    throw new BadRequestException("Đăng ký Hãng bay đã bị từ chối.");
+            }
 
             var authResponse = await GenerateAuthResponse(user);
 
@@ -131,13 +197,18 @@ namespace FlightBooking.Infrastructure.Services
             var expiresAt = DateTime.UtcNow.AddMinutes(
                 double.Parse(jwtSettings["ExpiryInMinutes"]!));
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email!),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("fullName", user.FullName ?? "")
             };
+
+            if (user.AirlineId.HasValue)
+            {
+                claims.Add(new Claim("airlineId", user.AirlineId.Value.ToString()));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
@@ -157,7 +228,8 @@ namespace FlightBooking.Infrastructure.Services
                     Id = user.Id,
                     FullName = user.FullName ?? "",
                     Email = user.Email!,
-                    Role = user.Role.ToString()
+                    Role = user.Role.ToString(),
+                    AirlineId = user.AirlineId
                 }
             });
         }

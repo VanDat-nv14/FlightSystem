@@ -32,6 +32,14 @@ namespace FlightBooking.API.Controllers.Auth
             return OkResponse(result, "Đăng ký thành công.");
         }
 
+        [HttpPost("register-partner")]
+        public async Task<IActionResult> RegisterPartner([FromBody] PartnerRegisterRequest request)
+        {
+            var result = await _authService.RegisterPartnerAsync(request);
+            // Ignore the token and just return success message, as they need approval
+            return OkResponse<object>(null!, "Đăng ký thành công. Vui lòng chờ Admin phê duyệt.");
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {

@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token');
         
         // Cố gắng lấy token mới
-        const res = await axios.post('https://localhost:7081/api/Auth/refresh', {
+        const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/Auth/refresh`, {
           refreshToken
         });
         

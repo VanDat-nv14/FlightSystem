@@ -35,6 +35,11 @@ namespace FlightBooking.API.Controllers.Flights
         public async Task<IActionResult> Update(int id, [FromBody] UpdateAirlineRequest request)
             => OkResponse(await _airlineService.UpdateAsync(id, request), "Cập nhật hãng bay thành công.");
 
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateAirlineStatusRequest request)
+            => OkResponse(await _airlineService.UpdateStatusAsync(id, request), "Cập nhật trạng thái hãng bay thành công.");
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)

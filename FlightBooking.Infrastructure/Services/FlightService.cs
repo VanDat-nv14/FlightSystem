@@ -64,6 +64,23 @@ namespace FlightBooking.Infrastructure.Services
             return MapToDto(flight, availableSeats);
         }
 
+        public async Task<List<FlightDto>> GetByAirlineAsync(int airlineId)
+        {
+            var flights = await _context.Flights
+                .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
+                .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
+                .Include(f => f.Aircraft)
+                .Where(f => f.Aircraft != null && f.Aircraft.AirlineId == airlineId)
+                .ToListAsync();
+
+            return flights.Select(f =>
+            {
+                var available = _context.FlightSeats
+                    .Count(s => s.FlightId == f.Id && s.Status == Domain.Enums.SeatStatus.Available);
+                return MapToDto(f, available);
+            }).ToList();
+        }
+
         public async Task<List<FlightDto>> SearchAsync(SearchFlightRequest request)
         {
             var flights = await _context.Flights
@@ -88,7 +105,7 @@ namespace FlightBooking.Infrastructure.Services
             return result;
         }
 
-        public async Task<FlightDto> CreateAsync(CreateFlightRequest request)
+        public async Task<FlightDto> CreateAsync(CreateFlightRequest request, int? currentAirlineId = null)
         {
             var routeExists = await _context.Routes.AnyAsync(r => r.Id == request.RouteId);
             if (!routeExists) throw new NotFoundException("Route", request.RouteId);
@@ -97,6 +114,9 @@ namespace FlightBooking.Infrastructure.Services
                 .Include(a => a.SeatConfigurations)
                 .FirstOrDefaultAsync(a => a.Id == request.AircraftId)
                 ?? throw new NotFoundException("Aircraft", request.AircraftId);
+
+            if (currentAirlineId.HasValue && aircraft.AirlineId != currentAirlineId.Value)
+                throw new BadRequestException("Bạn không có quyền tạo chuyến bay cho tàu bay của hãng khác.");
 
             var duplicate = await _context.Flights.AnyAsync(f =>
                 f.FlightNumber == request.FlightNumber &&
@@ -142,6 +162,28 @@ namespace FlightBooking.Infrastructure.Services
             flight.Status = Enum.Parse<Domain.Enums.FlightStatus>(request.Status);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<FlightSeatDto>> GetSeatsByFlightIdAsync(int flightId)
+        {
+            var flightExists = await _context.Flights.AnyAsync(f => f.Id == flightId);
+            if (!flightExists) throw new NotFoundException("Flight", flightId);
+
+            var seats = await _context.FlightSeats
+                .Where(s => s.FlightId == flightId)
+                .OrderBy(s => s.SeatNumber)
+                .Select(s => new FlightSeatDto
+                {
+                    Id = s.Id,
+                    FlightId = s.FlightId,
+                    SeatNumber = s.SeatNumber,
+                    ClassType = s.ClassType,
+                    Status = s.Status,
+                    Price = s.Price
+                })
+                .ToListAsync();
+
+            return seats;
         }
 
         public async Task<bool> DeleteAsync(int id)
