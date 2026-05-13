@@ -1,4 +1,4 @@
-﻿using FlightBooking.Domain.Common;
+using FlightBooking.Domain.Common;
 using FlightBooking.Domain.Entities.Bookings;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Domain.Enums;
@@ -20,6 +20,7 @@ namespace FlightBooking.Domain.Entities.Bookings
         public GroupBooking? GroupBooking { get; set; }
 
         public DateTime BookingDate { get; set; } = DateTime.UtcNow;
+        public string BookingCode { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
 
         public BookingStatus Status { get; set; } = BookingStatus.Pending;

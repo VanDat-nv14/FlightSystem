@@ -1,9 +1,4 @@
-﻿using FlightBooking.Application.Features.Account.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FlightBooking.Application.Features.Account.DTOs;
 
 namespace FlightBooking.Application.Features.Account.Interfaces
 {
@@ -11,5 +6,12 @@ namespace FlightBooking.Application.Features.Account.Interfaces
     { 
         Task<UserProfileResponse> GetUserProfileAsync(int userId);
         Task<bool> UpdateProfileAsync(int userId, UpdateProfileRequest request);
+
+        // User Management (Admin)
+        Task<List<UserListItem>> GetAllUsersAsync();
+        Task<UserListItem> CreateUserAsync(CreateUserRequest request);
+        Task<bool> UpdateUserAsync(int userId, UpdateUserRequest request);
+        Task<bool> DeleteUserAsync(int userId);
+        Task<bool> ToggleLockUserAsync(int userId);
     }
 }

@@ -1,4 +1,4 @@
-﻿using FlightBooking.Domain.Entities.Baggage;
+using FlightBooking.Domain.Entities.Baggage;
 using FlightBooking.Domain.Entities.Bookings;
 using FlightBooking.Domain.Entities.Cancellations;
 using FlightBooking.Domain.Entities.Flights;
@@ -6,6 +6,7 @@ using FlightBooking.Domain.Entities.Logs;
 using FlightBooking.Domain.Entities.Loyalty;
 using FlightBooking.Domain.Entities.Payments;
 using FlightBooking.Domain.Entities.Seats;
+using FlightBooking.Domain.Entities.Services;
 using FlightBooking.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -65,6 +66,10 @@ public class FlightBookingDbContext
     // ── Logs ───────────────────────────────────────────
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    // ── Additional Services ────────────────────────────
+    public DbSet<AdditionalService> AdditionalServices => Set<AdditionalService>();
+    public DbSet<BookingService> BookingServices => Set<BookingService>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -144,11 +149,16 @@ public class FlightBookingDbContext
             .HasOne(p => p.User).WithMany(u => u.Passengers)
             .HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
 
-        // ── UserProfile ────────────────────────────────────────────────────────
         modelBuilder.Entity<UserProfile>()
             .HasOne(up => up.User).WithOne(u => u.UserProfile)
             .HasForeignKey<UserProfile>(up => up.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ApplicationUser>()
+            .HasOne(u => u.Airline)
+            .WithMany()
+            .HasForeignKey(u => u.AirlineId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<UserProfile>()
             .HasIndex(up => up.IdCardNumber);
@@ -234,6 +244,21 @@ public class FlightBookingDbContext
         // ── GroupBooking ───────────────────────────────────────────────────────
         modelBuilder.Entity<GroupBooking>()
             .Property(g => g.DiscountPercentage).HasColumnType("decimal(5,2)");
+
+        // ── Additional Services ────────────────────────────────────────────────
+        modelBuilder.Entity<AdditionalService>()
+            .Property(s => s.Price).HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<BookingService>()
+            .Property(bs => bs.PriceAtBooking).HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<BookingService>()
+            .HasOne(bs => bs.Booking).WithMany()
+            .HasForeignKey(bs => bs.BookingId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<BookingService>()
+            .HasOne(bs => bs.AdditionalService).WithMany()
+            .HasForeignKey(bs => bs.AdditionalServiceId).OnDelete(DeleteBehavior.Restrict);
     }
 }
     

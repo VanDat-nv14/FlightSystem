@@ -3,32 +3,11 @@
   "WorkspaceRootPath": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.api\\controllers\\account\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|solutionrelative:flightbooking.api\\controllers\\account\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|solutionrelative:flightbooking.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{DE14C93B-3674-4591-9084-9CEC089428CD}|FlightBooking.Infrastructure\\FlightBooking.Infrastructure.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.infrastructure\\services\\accountservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DE14C93B-3674-4591-9084-9CEC089428CD}|FlightBooking.Infrastructure\\FlightBooking.Infrastructure.csproj|solutionrelative:flightbooking.infrastructure\\services\\accountservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{DE14C93B-3674-4591-9084-9CEC089428CD}|FlightBooking.Infrastructure\\FlightBooking.Infrastructure.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.infrastructure\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DE14C93B-3674-4591-9084-9CEC089428CD}|FlightBooking.Infrastructure\\FlightBooking.Infrastructure.csproj|solutionrelative:flightbooking.infrastructure\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3255A7B0-35A7-4DA9-867E-E08B9B937DFC}|FlightBooking.Application\\FlightBooking.Application.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.application\\features\\account\\dtos\\userprofileresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3255A7B0-35A7-4DA9-867E-E08B9B937DFC}|FlightBooking.Application\\FlightBooking.Application.csproj|solutionrelative:flightbooking.application\\features\\account\\dtos\\userprofileresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3255A7B0-35A7-4DA9-867E-E08B9B937DFC}|FlightBooking.Application\\FlightBooking.Application.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.application\\features\\account\\dtos\\updateprofilerequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3255A7B0-35A7-4DA9-867E-E08B9B937DFC}|FlightBooking.Application\\FlightBooking.Application.csproj|solutionrelative:flightbooking.application\\features\\account\\dtos\\updateprofilerequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|solutionrelative:flightbooking.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|d:\\.net\\hethongdatvemaybay\\flightbookingsystem\\flightbooking.api\\controllers\\auth\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D7541E8B-0C55-4755-AF62-C5273A410385}|FlightBooking.API\\FlightBooking.API.csproj|solutionrelative:flightbooking.api\\controllers\\auth\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\nvdat\\AppData\\Roaming\\Microsoft\\UserSecrets\\6754d531-c569-4565-8a6e-552c045194f5\\secrets.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -38,8 +17,21 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 0,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\appsettings.json",
+              "RelativeDocumentMoniker": "FlightBooking.API\\appsettings.json",
+              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\appsettings.json",
+              "RelativeToolTip": "FlightBooking.API\\appsettings.json",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAABgAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-05-13T05:20:47.915Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
@@ -54,93 +46,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "AccountController.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\Controllers\\Account\\AccountController.cs",
-              "RelativeDocumentMoniker": "FlightBooking.API\\Controllers\\Account\\AccountController.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\Controllers\\Account\\AccountController.cs",
-              "RelativeToolTip": "FlightBooking.API\\Controllers\\Account\\AccountController.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAuwBQAAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:44:58.281Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AuthService.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Infrastructure\\Services\\AuthService.cs",
-              "RelativeDocumentMoniker": "FlightBooking.Infrastructure\\Services\\AuthService.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Infrastructure\\Services\\AuthService.cs",
-              "RelativeToolTip": "FlightBooking.Infrastructure\\Services\\AuthService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:35:54.989Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "AccountService.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Infrastructure\\Services\\AccountService.cs",
-              "RelativeDocumentMoniker": "FlightBooking.Infrastructure\\Services\\AccountService.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Infrastructure\\Services\\AccountService.cs",
-              "RelativeToolTip": "FlightBooking.Infrastructure\\Services\\AccountService.cs",
-              "ViewState": "AgIAABgAAAAAAAAAAAAYwDMAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:33:36.265Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "UpdateProfileRequest.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Application\\Features\\Account\\DTOs\\UpdateProfileRequest.cs",
-              "RelativeDocumentMoniker": "FlightBooking.Application\\Features\\Account\\DTOs\\UpdateProfileRequest.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Application\\Features\\Account\\DTOs\\UpdateProfileRequest.cs",
-              "RelativeToolTip": "FlightBooking.Application\\Features\\Account\\DTOs\\UpdateProfileRequest.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:27:14.688Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "Program.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\Program.cs",
-              "RelativeDocumentMoniker": "FlightBooking.API\\Program.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\Program.cs",
-              "RelativeToolTip": "FlightBooking.API\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHcAAAA+AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:33:58.084Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "UserProfileResponse.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Application\\Features\\Account\\DTOs\\UserProfileResponse.cs",
-              "RelativeDocumentMoniker": "FlightBooking.Application\\Features\\Account\\DTOs\\UserProfileResponse.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.Application\\Features\\Account\\DTOs\\UserProfileResponse.cs",
-              "RelativeToolTip": "FlightBooking.Application\\Features\\Account\\DTOs\\UserProfileResponse.cs",
-              "ViewState": "AgIAAAcAAAAAAAAAAAA5wAcAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:14:13.555Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "AuthController.cs",
-              "DocumentMoniker": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\Controllers\\Auth\\AuthController.cs",
-              "RelativeDocumentMoniker": "FlightBooking.API\\Controllers\\Auth\\AuthController.cs",
-              "ToolTip": "D:\\.NET\\HeThongDatVeMayBay\\FlightBookingSystem\\FlightBooking.API\\Controllers\\Auth\\AuthController.cs",
-              "RelativeToolTip": "FlightBooking.API\\Controllers\\Auth\\AuthController.cs",
-              "ViewState": "AgIAAEEAAAAAAAAAAAA9wD0AAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-16T08:07:44.9Z",
+              "Title": "secrets.json",
+              "DocumentMoniker": "C:\\Users\\nvdat\\AppData\\Roaming\\Microsoft\\UserSecrets\\6754d531-c569-4565-8a6e-552c045194f5\\secrets.json",
+              "ToolTip": "C:\\Users\\nvdat\\AppData\\Roaming\\Microsoft\\UserSecrets\\6754d531-c569-4565-8a6e-552c045194f5\\secrets.json",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAAABoAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-05-13T05:22:27.796Z",
               "EditorCaption": ""
             }
           ]

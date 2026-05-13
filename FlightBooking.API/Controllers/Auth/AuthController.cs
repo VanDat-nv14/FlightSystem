@@ -29,14 +29,22 @@ namespace FlightBooking.API.Controllers.Auth
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             var result = await _authService.RegisterAsync(request);
-            return Ok(result);
+            return OkResponse(result, "Đăng ký thành công.");
+        }
+
+        [HttpPost("register-partner")]
+        public async Task<IActionResult> RegisterPartner([FromBody] PartnerRegisterRequest request)
+        {
+            var result = await _authService.RegisterPartnerAsync(request);
+            // Ignore the token and just return success message, as they need approval
+            return OkResponse<object>(null!, "Đăng ký thành công. Vui lòng chờ Admin phê duyệt.");
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var result = await _authService.LoginAsync(request);
-            return Ok(result);
+            return OkResponse(result, "Đăng nhập thành công.");
         }
 
         [HttpGet("login-google")]
@@ -55,8 +63,8 @@ namespace FlightBooking.API.Controllers.Auth
             if (!authenticateResult.Succeeded) 
                 return BadRequest("Lỗi xác thực từ Google");
                 
-            var email = authenticateResult.Principal.FindFirstValue(ClaimTypes.Email);
-            var name = authenticateResult.Principal.FindFirstValue(ClaimTypes.Name);
+            var email = authenticateResult.Principal.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+            var name = authenticateResult.Principal.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
             var authResponse = await _authService.LoginWithGoogleAsync(email, name);
             return OkResponse(authResponse, "Đăng nhập Google thành công");
         }
@@ -78,7 +86,7 @@ namespace FlightBooking.API.Controllers.Auth
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
         {
             var result = await _authService.RefreshTokenAsync(request);
-            return Ok(result);
+            return OkResponse(result, "Làm mới token thành công.");
         }
     }
 }
