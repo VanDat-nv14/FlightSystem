@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom"
 import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut, Building2 } from "lucide-react"
 import { useAuthStore } from "../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, to: "/admin" },
@@ -13,6 +14,7 @@ const navItems = [
   { name: "Đặt vé", icon: Ticket, to: "/admin/bookings" },
   { name: "Người dùng", icon: Users, to: "/admin/users" },
   { name: "Báo cáo", icon: FileText, to: "/admin/reports" },
+  { name: "Hồ sơ", icon: Users, to: "/admin/profile" },
 ]
 
 export default function AdminLayout() {
@@ -79,9 +81,12 @@ export default function AdminLayout() {
               <div className="text-sm font-medium">{user?.fullName}</div>
               <div className="text-xs text-muted-foreground">{user?.role}</div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium text-sm">
-              {user ? getInitials(user.fullName) : "AD"}
-            </div>
+            <Avatar className="h-9 w-9 border">
+              <AvatarImage src={user?.urlAvatar || ""} alt={user?.fullName || "Admin"} className="object-cover" />
+              <AvatarFallback className="bg-primary/20 text-primary text-sm font-medium">
+                {user ? getInitials(user.fullName) : "AD"}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </header>
         <main className="flex-1 p-6 overflow-auto bg-muted/10">

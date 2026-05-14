@@ -30,7 +30,10 @@ namespace FlightBooking.Infrastructure.Services
             ArrivalTime = f.ArrivalTime,
             Status = f.Status.ToString(),
             BasePrice = f.BasePrice,
-            AvailableSeats = availableSeats
+            AvailableSeats = availableSeats,
+            AirlineCode = f.Aircraft?.Airline?.Code ?? string.Empty,
+            AirlineName = f.Aircraft?.Airline?.Name ?? string.Empty,
+            AirlineLogo = f.Aircraft?.Airline?.LogoUrl ?? string.Empty
         };
 
         public async Task<List<FlightDto>> GetAllAsync()
@@ -38,7 +41,7 @@ namespace FlightBooking.Infrastructure.Services
             var flights = await _context.Flights
                 .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
                 .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
-                .Include(f => f.Aircraft)
+                .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
                 .ToListAsync();
 
             return flights.Select(f =>
@@ -54,7 +57,7 @@ namespace FlightBooking.Infrastructure.Services
             var flight = await _context.Flights
                 .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
                 .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
-                .Include(f => f.Aircraft)
+                .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
                 .FirstOrDefaultAsync(f => f.Id == id)
                 ?? throw new NotFoundException("Flight", id);
 
@@ -69,7 +72,7 @@ namespace FlightBooking.Infrastructure.Services
             var flights = await _context.Flights
                 .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
                 .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
-                .Include(f => f.Aircraft)
+                .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
                 .Where(f => f.Aircraft != null && f.Aircraft.AirlineId == airlineId)
                 .ToListAsync();
 
@@ -86,7 +89,7 @@ namespace FlightBooking.Infrastructure.Services
             var flights = await _context.Flights
                 .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
                 .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
-                .Include(f => f.Aircraft)
+                .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
                 .Where(f =>
                     f.Route!.OriginAirportId == request.OriginAirportId &&
                     f.Route.DestinationAirportId == request.DestinationAirportId &&

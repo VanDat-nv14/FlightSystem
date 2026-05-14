@@ -3,10 +3,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { 
   Plane, 
   Calendar, 
-  Clock, 
   ChevronRight, 
   Download, 
-  CreditCard, 
   AlertCircle,
   CheckCircle2,
   History,

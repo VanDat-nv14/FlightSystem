@@ -17,6 +17,8 @@ import BookingHistoryPage from "../pages/customer/BookingHistoryPage"
 import LoginPage from "../pages/auth/LoginPage"
 import RegisterPage from "../pages/auth/RegisterPage"
 import PartnerRegisterPage from "../pages/auth/PartnerRegisterPage"
+import GoogleCallbackPage from "../pages/auth/GoogleCallbackPage"
+import ProfilePage from "../pages/account/ProfilePage"
 
 // Admin Pages
 import DashboardPage from "../pages/admin/DashboardPage"
@@ -35,6 +37,10 @@ import PartnerAircraftsPage from "../pages/partner/PartnerAircraftsPage"
 import PartnerFaresPage from "../pages/partner/PartnerFaresPage"
 import PartnerBookingsPage from "../pages/partner/PartnerBookingsPage"
 import PartnerRoutesPage from "../pages/partner/PartnerRoutesPage"
+import PartnerPromotionsPage from "../pages/partner/PartnerPromotionsPage"
+import PartnerReportsPage from "../pages/partner/PartnerReportsPage"
+import PartnerSettingsPage from "../pages/partner/PartnerSettingsPage"
+import PartnerTeamPage from "../pages/partner/PartnerTeamPage"
 
 export function Router() {
   return (
@@ -44,13 +50,16 @@ export function Router() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="partner-register" element={<PartnerRegisterPage />} />
+        <Route path="auth/google-callback" element={<GoogleCallbackPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
         <Route path="flights" element={<FlightListPage />} />
         <Route path="seats" element={<SeatSelectionPage />} />
         <Route path="passenger-info" element={<PassengerInfoPage />} />
         <Route path="payment" element={<PaymentPage />} />
         <Route path="booking-confirm" element={<BookingConfirmPage />} />
         <Route path="history" element={<BookingHistoryPage />} />
-        {/* Add more customer routes here later */}
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin", "Employee"]} />}>
@@ -63,11 +72,10 @@ export function Router() {
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="airlines" element={<AirlinesManagementPage />} />
-          {/* Add more admin routes here later */}
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
 
-      {/* Partner Routes */}
       <Route element={<ProtectedRoute allowedRoles={["AirlineManager"]} />}>
         <Route path="/partner" element={<PartnerLayout />}>
           <Route index element={<PartnerDashboardPage />} />
@@ -76,10 +84,11 @@ export function Router() {
           <Route path="routes" element={<PartnerRoutesPage />} />
           <Route path="fares" element={<PartnerFaresPage />} />
           <Route path="bookings" element={<PartnerBookingsPage />} />
-          <Route path="promotions" element={<div>Khuyến mãi</div>} />
-          <Route path="reports" element={<div>Báo cáo</div>} />
-          <Route path="settings" element={<div>Cài đặt hãng</div>} />
-          <Route path="team" element={<div>Nhân sự</div>} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="promotions" element={<PartnerPromotionsPage />} />
+          <Route path="reports" element={<PartnerReportsPage />} />
+          <Route path="settings" element={<PartnerSettingsPage />} />
+          <Route path="team" element={<PartnerTeamPage />} />
         </Route>
       </Route>
     </Routes>

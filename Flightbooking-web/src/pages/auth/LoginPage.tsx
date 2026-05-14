@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -17,11 +17,31 @@ const loginSchema = z.object({
   password: z.string().min(6, "Mật khẩu ít nhất 6 ký tự"),
 })
 
+function getRedirectPath(role?: string) {
+  if (role === "Admin" || role === "Employee") return "/admin"
+  if (role === "AirlineManager") return "/partner"
+  return "/"
+}
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState("")
+  const [searchParams] = useSearchParams()
+  const [errorMsg, setErrorMsg] = useState(() => {
+    const error = searchParams.get("error")
+    if (error === "google_missing_email") return "Google không cung cấp email cho tài khoản này."
+    if (error === "google_failed") return "Đăng nhập Google thất bại. Vui lòng thử lại."
+    return ""
+  })
   const navigate = useNavigate()
   const setAuth = useAuthStore((state) => state.setAuth)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(getRedirectPath(user?.role), { replace: true })
+    }
+  }, [isAuthenticated, navigate, user?.role])
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),

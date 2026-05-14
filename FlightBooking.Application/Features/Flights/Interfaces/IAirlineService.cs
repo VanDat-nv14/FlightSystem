@@ -11,8 +11,10 @@ namespace FlightBooking.Application.Features.Flights.Interfaces
     {
         Task<List<AirlineDto>> GetAllAsync();
         Task<AirlineDto> GetByIdAsync(int id);
+        Task<AirlineDto> GetPartnerAirlineAsync(int airlineId);
         Task<AirlineDto> CreateAsync(CreateAirlineRequest request);
         Task<bool> UpdateAsync(int id, UpdateAirlineRequest request);
+        Task<AirlineDto> UpdatePartnerAirlineAsync(int airlineId, UpdateAirlineRequest request);
         Task<bool> UpdateStatusAsync(int id, UpdateAirlineStatusRequest request);
         Task<bool> DeleteAsync(int id);
     }

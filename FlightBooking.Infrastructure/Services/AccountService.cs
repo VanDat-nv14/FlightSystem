@@ -67,8 +67,8 @@ namespace FlightBooking.Infrastructure.Services
             user.UserProfile.PassportNumber = request.PassportNumber;
             user.UserProfile.PassportExpiry = request.PassportExpiry;
 
-            if (!string.IsNullOrEmpty(request.UrlAvatar))
-                user.UserProfile.UrlAvatar = request.UrlAvatar;
+            if (request.UrlAvatar != null)
+                user.UserProfile.UrlAvatar = string.IsNullOrWhiteSpace(request.UrlAvatar) ? null : request.UrlAvatar;
 
             user.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
@@ -186,6 +186,60 @@ namespace FlightBooking.Infrastructure.Services
                 await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100)); // khóa vĩnh viễn
             }
             return true;
+        }
+
+        public async Task<List<UserListItem>> GetAirlineUsersAsync(int airlineId)
+        {
+            var users = await _context.Users
+                .Include(u => u.Airline)
+                .Where(u => u.AirlineId == airlineId && u.Role == UserRole.AirlineManager)
+                .OrderBy(u => u.Id)
+                .ToListAsync();
+
+            return users.Select(u => new UserListItem
+            {
+                Id = u.Id,
+                FullName = u.FullName ?? "",
+                Email = u.Email ?? "",
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role.ToString(),
+                CreatedAt = u.CreateAt,
+                IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow,
+                AirlineId = u.AirlineId,
+                AirlineName = u.Airline?.Name
+            }).ToList();
+        }
+
+        public async Task<UserListItem> CreateAirlineUserAsync(int airlineId, CreateUserRequest request)
+        {
+            request.Role = UserRole.AirlineManager.ToString();
+            request.AirlineId = airlineId;
+            var user = await CreateUserAsync(request);
+            return (await GetAirlineUsersAsync(airlineId)).First(u => u.Id == user.Id);
+        }
+
+        public async Task<bool> UpdateAirlineUserAsync(int airlineId, int userId, UpdateUserRequest request)
+        {
+            var user = await _context.Users.FindAsync(userId)
+                ?? throw new NotFoundException("User", userId);
+
+            if (user.AirlineId != airlineId || user.Role != UserRole.AirlineManager)
+                throw new BadRequestException("Người dùng này không thuộc hãng bay của bạn.");
+
+            request.Role = UserRole.AirlineManager.ToString();
+            request.AirlineId = airlineId;
+            return await UpdateUserAsync(userId, request);
+        }
+
+        public async Task<bool> ToggleLockAirlineUserAsync(int airlineId, int userId)
+        {
+            var user = await _context.Users.FindAsync(userId)
+                ?? throw new NotFoundException("User", userId);
+
+            if (user.AirlineId != airlineId || user.Role != UserRole.AirlineManager)
+                throw new BadRequestException("Người dùng này không thuộc hãng bay của bạn.");
+
+            return await ToggleLockUserAsync(userId);
         }
     }
 }

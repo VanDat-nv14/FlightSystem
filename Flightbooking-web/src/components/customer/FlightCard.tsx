@@ -1,5 +1,5 @@
 import { motion } from "framer-motion"
-import { CheckCircle2, ChevronRight, Briefcase } from "lucide-react"
+import { CheckCircle2, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useNavigate } from "react-router-dom"
 
@@ -16,6 +16,9 @@ export interface Flight {
   status: string
   basePrice: number
   availableSeats: number
+  airlineCode: string
+  airlineName: string
+  airlineLogo: string
 }
 
 interface FlightCardProps {
@@ -33,9 +36,6 @@ const AIRLINE_CONFIG: Record<string, { name: string; color: string; bg: string; 
   SQ: { name: "Singapore Airlines", color: "#1A1A2E", bg: "#F0F0F8", textColor: "#1A1A2E" },
 }
 
-function getAirlineCode(flightNumber: string): string {
-  return flightNumber.slice(0, 2).toUpperCase()
-}
 
 export function FlightCard({ flight, index, passengerCount = 1 }: FlightCardProps) {
   const navigate = useNavigate()
@@ -45,8 +45,8 @@ export function FlightCard({ flight, index, passengerCount = 1 }: FlightCardProp
   const hours   = Math.floor(diffMs / (1000 * 60 * 60))
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
 
-  const airlineCode   = getAirlineCode(flight.flightNumber)
-  const airlineInfo   = AIRLINE_CONFIG[airlineCode] ?? { name: "SkyBooking", color: "#6366F1", bg: "#EEF2FF", textColor: "#6366F1" }
+  const airlineCode   = flight.airlineCode
+  const airlineInfo   = AIRLINE_CONFIG[airlineCode] ?? { name: flight.airlineName, color: "#6366F1", bg: "#EEF2FF", textColor: "#6366F1" }
   const seatsLeft     = flight.availableSeats
 
   function handleSelect() {
@@ -115,14 +115,22 @@ export function FlightCard({ flight, index, passengerCount = 1 }: FlightCardProp
 
           {/* Airline Line */}
           <div className="flex items-center gap-3 mt-4">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shadow-sm shrink-0"
-              style={{ backgroundColor: airlineInfo.color, color: "#fff" }}
-            >
-              {airlineCode}
-            </div>
+            {flight.airlineLogo ? (
+              <img 
+                src={flight.airlineLogo} 
+                alt={flight.airlineName} 
+                className="w-8 h-8 object-contain rounded-lg shadow-sm shrink-0" 
+              />
+            ) : (
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shadow-sm shrink-0"
+                style={{ backgroundColor: airlineInfo.color, color: "#fff" }}
+              >
+                {airlineCode}
+              </div>
+            )}
             <div className="text-sm text-gray-700">
-              {airlineInfo.name} <span className="text-gray-400 mx-1">•</span> {flight.aircraftModel}
+              {flight.airlineName} <span className="text-gray-400 mx-1">•</span> {flight.aircraftModel}
             </div>
           </div>
         </div>
@@ -153,7 +161,7 @@ export function FlightCard({ flight, index, passengerCount = 1 }: FlightCardProp
           </Button>
           
           {seatsLeft > 0 && seatsLeft <= 10 && (
-            <p className="text-xs text-red-500 text-right mt-2 font-medium">Chỉ còn {seatsLeft} ghế với giá này!</p>
+                  <p className="text-xs text-red-500 text-right mt-2 font-medium">Chỉ còn {seatsLeft} ghế với giá này!</p>
           )}
         </div>
       </div>

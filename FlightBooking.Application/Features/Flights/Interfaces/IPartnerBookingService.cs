@@ -7,5 +7,6 @@ namespace FlightBooking.Application.Features.Flights.Interfaces
     public interface IPartnerBookingService
     {
         Task<List<PartnerTicketDto>> GetTicketsByAirlineAsync(int airlineId);
+        Task<PartnerTicketDto> UpdateTicketCheckInStatusAsync(int airlineId, int ticketId, UpdateTicketCheckInStatusRequest request);
     }
 }

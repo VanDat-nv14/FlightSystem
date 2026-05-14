@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from "react-router-dom"
 import { useAuthStore } from "../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,9 @@ export default function CustomerLayout() {
     logout()
     navigate("/")
   }
+
+  const getInitials = (name: string) =>
+    name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().substring(0, 2) || "U"
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -38,7 +42,12 @@ export default function CustomerLayout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2">
-                    <User className="w-4 h-4" />
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={user?.urlAvatar || ""} alt={user?.fullName || "User"} className="object-cover" />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {user ? getInitials(user.fullName) : <User className="h-4 w-4" />}
+                      </AvatarFallback>
+                    </Avatar>
                     <span className="hidden sm:inline-block">{user?.fullName || "Tài khoản"}</span>
                   </Button>
                 </DropdownMenuTrigger>
