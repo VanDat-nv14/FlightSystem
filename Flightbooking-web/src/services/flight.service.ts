@@ -12,6 +12,9 @@ export interface Flight {
   status: string;
   basePrice: number;
   availableSeats: number;
+  airlineCode: string;
+  airlineName: string;
+  airlineLogo: string;
 }
 
 export interface CreateFlightRequest {

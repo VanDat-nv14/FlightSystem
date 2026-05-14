@@ -145,7 +145,12 @@ namespace FlightBooking.Infrastructure.Services
 
         public async Task<AuthResponse> LoginWithGoogleAsync(string email, string fullName)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            if (string.IsNullOrWhiteSpace(email))
+                throw new BadRequestException("Google account does not provide an email address.");
+
+            var user = await _context.Users
+                .Include(u => u.Airline)
+                .FirstOrDefaultAsync(u => u.Email == email);
 
             if (user == null)
             {
@@ -165,7 +170,19 @@ namespace FlightBooking.Infrastructure.Services
                 await _userManager.AddToRoleAsync(user, UserRole.Customer.ToString());
             }
 
-            return await GenerateAuthResponse(user);
+            var authResponse = await GenerateAuthResponse(user);
+            var session = new UserSession
+            {
+                UserId = user.Id,
+                RefreshToken = authResponse.RefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsRevoked = false
+            };
+
+            _context.UserSessions.Add(session);
+            await _context.SaveChangesAsync();
+
+            return authResponse;
         }
 
         public Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
@@ -191,6 +208,11 @@ namespace FlightBooking.Infrastructure.Services
 
         private async Task<AuthResponse> GenerateAuthResponse(ApplicationUser user)
         {
+            var urlAvatar = await _context.UserProfiles
+                .Where(p => p.UserId == user.Id)
+                .Select(p => p.UrlAvatar)
+                .FirstOrDefaultAsync();
+
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtSettings["SecurityKey"]!));
@@ -229,6 +251,7 @@ namespace FlightBooking.Infrastructure.Services
                     FullName = user.FullName ?? "",
                     Email = user.Email!,
                     Role = user.Role.ToString(),
+                    UrlAvatar = urlAvatar,
                     AirlineId = user.AirlineId
                 }
             });

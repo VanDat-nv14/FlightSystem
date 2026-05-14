@@ -1,4 +1,4 @@
-﻿using FlightBooking.Domain.Enums;
+using FlightBooking.Domain.Enums;
 
 namespace FlightBooking.Application.Features.Flights.DTOs
 {
@@ -16,6 +16,11 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string Status { get; set; } = string.Empty;
         public decimal BasePrice { get; set; }
         public int AvailableSeats { get; set; }
+
+        // Airline info
+        public string AirlineCode { get; set; } = string.Empty;
+        public string AirlineName { get; set; } = string.Empty;
+        public string AirlineLogo { get; set; } = string.Empty;
     }
 
     public class CreateFlightRequest

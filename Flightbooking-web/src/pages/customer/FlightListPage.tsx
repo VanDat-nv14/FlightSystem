@@ -7,17 +7,10 @@ import { Skeleton } from "../../components/ui/skeleton"
 import { useSearchParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { flightService, type Flight } from "../../services/flight.service"
+import { airlineService } from "../../services/airline.service"
 import { useState, useMemo } from "react"
-import { Plane, CheckCircle2 } from "lucide-react"
+import { Plane } from "lucide-react"
 
-const AIRLINE_LABELS: Record<string, string> = {
-  VN: "Vietnam Airlines",
-  VJ: "VietJet Air",
-  BL: "Bamboo Airways",
-  QH: "Vietravel Airlines",
-  BN: "Pacific Airlines",
-  SQ: "Singapore Airlines",
-}
 
 const TIME_RANGES = [
   { id: "00-06", label: "00:00–05:59", min: 0, max: 6 },
@@ -54,17 +47,21 @@ export default function FlightListPage() {
     },
   })
 
-  // Pre-calculate filter counts
+  const { data: airlines = [] } = useQuery({
+    queryKey: ["airlines"],
+    queryFn: airlineService.getAll,
+  })
+
   const filterCounts = useMemo(() => {
-    const airlines: Record<string, number> = {}
+    const airlinesCount: Record<string, number> = {}
     const times: Record<string, number> = {}
     
     TIME_RANGES.forEach(r => times[r.id] = 0)
 
     flights.forEach(f => {
       // Airline count
-      const code = f.flightNumber.slice(0, 2)
-      airlines[code] = (airlines[code] || 0) + 1
+      const code = f.airlineCode
+      airlinesCount[code] = (airlinesCount[code] || 0) + 1
 
       // Time count
       const hour = new Date(f.departureTime).getHours()
@@ -74,7 +71,7 @@ export default function FlightListPage() {
       else times["18-24"]++
     })
 
-    return { airlines, times }
+    return { airlines: airlinesCount, times }
   }, [flights])
 
   function toggleAirline(code: string) {
@@ -90,7 +87,7 @@ export default function FlightListPage() {
 
     // 1. Filter by Airline
     if (selectedAirlines.length > 0) {
-      result = result.filter(f => selectedAirlines.includes(f.flightNumber.slice(0, 2)))
+      result = result.filter(f => selectedAirlines.includes(f.airlineCode))
     }
 
     // 2. Filter by Time Range
@@ -170,23 +167,23 @@ export default function FlightListPage() {
             {/* Airlines */}
             <div className="space-y-3">
               <h3 className="font-bold text-gray-900">Hãng hàng không</h3>
-              {Object.keys(filterCounts.airlines).length === 0 ? (
+              {airlines.length === 0 ? (
                 <p className="text-[13px] text-gray-400">Không có dữ liệu</p>
               ) : (
-                Object.keys(filterCounts.airlines).map(code => (
-                  <div key={code} className="flex items-center justify-between">
+                airlines.map(airline => (
+                  <div key={airline.code} className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <Checkbox
-                        id={`airline-${code}`}
+                        id={`airline-${airline.code}`}
                         className="w-5 h-5 rounded-sm border-gray-300 data-[state=checked]:bg-[#006CE4] data-[state=checked]:border-[#006CE4]"
-                        checked={selectedAirlines.includes(code)}
-                        onCheckedChange={() => toggleAirline(code)}
+                        checked={selectedAirlines.includes(airline.code)}
+                        onCheckedChange={() => toggleAirline(airline.code)}
                       />
-                      <Label htmlFor={`airline-${code}`} className="cursor-pointer text-[14px] text-gray-700 font-normal">
-                        {AIRLINE_LABELS[code] ?? code}
+                      <Label htmlFor={`airline-${airline.code}`} className="cursor-pointer text-[14px] text-gray-700 font-normal">
+                        {airline.name}
                       </Label>
                     </div>
-                    <span className="text-[13px] text-gray-500">{filterCounts.airlines[code]}</span>
+                    <span className="text-[13px] text-gray-500">{filterCounts.airlines[airline.code] || 0}</span>
                   </div>
                 ))
               )}

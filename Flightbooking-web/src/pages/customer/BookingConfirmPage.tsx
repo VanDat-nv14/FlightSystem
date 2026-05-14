@@ -12,11 +12,6 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
-// Mock booking code generator
-function genCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase()
-}
-
 export default function BookingConfirmPage() {
   const [params] = useSearchParams()
   const paymentType  = params.get("paymentType")  as "full" | "deposit" | null ?? "full"
@@ -24,7 +19,6 @@ export default function BookingConfirmPage() {
   const remaining    = Number(params.get("remaining"))   || 0
   const dueDateIso   = params.get("dueDate")             || ""
   
-  const bookingId    = params.get("bookingId")           || "0"
   const bookingCode  = params.get("pnr")                 || "N/A"
 
   const isDeposit    = paymentType === "deposit" && remaining > 0

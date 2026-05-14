@@ -54,6 +54,11 @@ namespace FlightBooking.Infrastructure.Services
             };
         }
 
+        public Task<AirlineDto> GetPartnerAirlineAsync(int airlineId)
+        {
+            return GetByIdAsync(airlineId);
+        }
+
         public async Task<AirlineDto> CreateAsync(CreateAirlineRequest request)
         {
             var exists = await _context.Airlines.AnyAsync(a => a.Code == request.Code);
@@ -86,6 +91,21 @@ namespace FlightBooking.Infrastructure.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<AirlineDto> UpdatePartnerAirlineAsync(int airlineId, UpdateAirlineRequest request)
+        {
+            var airline = await _context.Airlines.FindAsync(airlineId)
+                ?? throw new NotFoundException("Airline", airlineId);
+
+            airline.Name = request.Name;
+            airline.LogoUrl = string.IsNullOrWhiteSpace(request.LogoUrl) ? null : request.LogoUrl;
+            airline.Country = string.IsNullOrWhiteSpace(request.Country) ? null : request.Country;
+            airline.IsActive = request.IsActive;
+            airline.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+            return await GetByIdAsync(airlineId);
         }
 
         public async Task<bool> UpdateStatusAsync(int id, UpdateAirlineStatusRequest request)

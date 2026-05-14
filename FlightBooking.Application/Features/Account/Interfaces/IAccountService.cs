@@ -13,5 +13,11 @@ namespace FlightBooking.Application.Features.Account.Interfaces
         Task<bool> UpdateUserAsync(int userId, UpdateUserRequest request);
         Task<bool> DeleteUserAsync(int userId);
         Task<bool> ToggleLockUserAsync(int userId);
+
+        // Partner team management
+        Task<List<UserListItem>> GetAirlineUsersAsync(int airlineId);
+        Task<UserListItem> CreateAirlineUserAsync(int airlineId, CreateUserRequest request);
+        Task<bool> UpdateAirlineUserAsync(int airlineId, int userId, UpdateUserRequest request);
+        Task<bool> ToggleLockAirlineUserAsync(int airlineId, int userId);
     }
 }

@@ -6,6 +6,7 @@ export interface User {
   fullName: string;
   email: string;
   role: string;
+  urlAvatar?: string | null;
   airlineId?: number;
 }
 
@@ -17,6 +18,7 @@ interface AuthState {
   
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
+  updateUser: (user: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -39,6 +41,10 @@ export const useAuthStore = create<AuthState>()(
         accessToken,
         refreshToken,
       }),
+
+      updateUser: (user) => set((state) => ({
+        user: state.user ? { ...state.user, ...user } : state.user,
+      })),
 
       logout: () => set({
         user: null,
