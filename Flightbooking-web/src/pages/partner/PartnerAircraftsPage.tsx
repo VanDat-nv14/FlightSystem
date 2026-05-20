@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { aircraftService, type Aircraft, type CreateAircraftRequest, type UpdateAircraftRequest } from "../../services/aircraft.service"
 import { useAuthStore } from "../../stores/useAuthStore"
+import { PaginationControl } from "@/components/ui/pagination-control"
 
 interface AircraftModalProps {
   mode: "create" | "edit"
@@ -101,6 +102,8 @@ function AircraftModal({ mode, aircraft, onClose, onSave, isSaving, airlineId }:
 export default function PartnerAircraftsPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null)
   const [editingAircraft, setEditingAircraft] = useState<Aircraft | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
@@ -134,6 +137,9 @@ export default function PartnerAircraftsPage() {
     a.registrationNumber.toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paginatedAircrafts = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
   function handleSave(data: any) {
     if (modalMode === "create") {
       createMutation.mutate(data)
@@ -162,7 +168,7 @@ export default function PartnerAircraftsPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm kiếm theo model, số đăng ký..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Tìm kiếm theo model, số đăng ký..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
         <Badge variant="outline" className="text-sm">{filtered.length} máy bay</Badge>
       </div>
@@ -191,7 +197,7 @@ export default function PartnerAircraftsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(aircraft => (
+              paginatedAircrafts.map(aircraft => (
                 <TableRow key={aircraft.id}>
                   <TableCell className="font-mono font-bold text-primary">{aircraft.registrationNumber}</TableCell>
                   <TableCell>
@@ -243,6 +249,15 @@ export default function PartnerAircraftsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedAircrafts.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> máy bay
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <AnimatePresence>
         {modalMode && (

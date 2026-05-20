@@ -6,6 +6,7 @@ namespace FlightBooking.Application.Features.Flights.DTOs
     public class AdminBookingDto
     {
         public int BookingId { get; set; }
+        public string BookingCode { get; set; } = string.Empty;
         public string BookingStatus { get; set; } = string.Empty;
         public string BookingType { get; set; } = string.Empty;
         public DateTime BookingDate { get; set; }
@@ -43,6 +44,21 @@ namespace FlightBooking.Application.Features.Flights.DTOs
 
         // Status
         public string CheckInStatus { get; set; } = string.Empty;
+        public List<BaggageTagDto> BaggageTags { get; set; } = new();
+    }
+
+    public class BaggageTagDto
+    {
+        public int Id { get; set; }
+        public string TagCode { get; set; } = string.Empty;
+        public decimal Weight { get; set; }
+        public decimal ExtraFee { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? CheckedInAt { get; set; }
+        public DateTime? LoadedAt { get; set; }
+        public DateTime? ArrivedAt { get; set; }
+        public DateTime? ClaimedAt { get; set; }
     }
 
     public class UpdateBookingStatusRequest

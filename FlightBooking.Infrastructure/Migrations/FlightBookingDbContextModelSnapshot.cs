@@ -53,6 +53,62 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.ToTable("BaggageAllowances");
                 });
 
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Baggage.BaggageTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ArrivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("BookingBaggageId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CheckedInAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FlightId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LoadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TagCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingBaggageId");
+
+                    b.HasIndex("FlightId");
+
+                    b.HasIndex("TagCode")
+                        .IsUnique();
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("BaggageTags");
+                });
+
             modelBuilder.Entity("FlightBooking.Domain.Entities.Baggage.BookingBaggage", b =>
                 {
                     b.Property<int>("Id")
@@ -73,6 +129,9 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Property<int>("PassengerId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("TicketId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -84,6 +143,8 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.HasIndex("BookingId");
 
                     b.HasIndex("PassengerId");
+
+                    b.HasIndex("TicketId");
 
                     b.ToTable("BookingBaggages");
                 });
@@ -98,7 +159,7 @@ namespace FlightBooking.Infrastructure.Migrations
 
                     b.Property<string>("BookingCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("BookingDate")
                         .HasColumnType("datetime2");
@@ -128,6 +189,9 @@ namespace FlightBooking.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BookingCode")
+                        .IsUnique();
 
                     b.HasIndex("GroupBookingId");
 
@@ -420,6 +484,18 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FeaturedDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("FeaturedDisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FeaturedImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -467,6 +543,12 @@ namespace FlightBooking.Infrastructure.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<int>("StopCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StopoverCodes")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1074,6 +1156,48 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Users.FavoriteItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Subtitle")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ItemType", "ItemId")
+                        .IsUnique();
+
+                    b.ToTable("FavoriteItems");
+                });
+
             modelBuilder.Entity("FlightBooking.Domain.Entities.Users.Passenger", b =>
                 {
                     b.Property<int>("Id")
@@ -1593,6 +1717,33 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Baggage.BaggageTag", b =>
+                {
+                    b.HasOne("FlightBooking.Domain.Entities.Baggage.BookingBaggage", "BookingBaggage")
+                        .WithMany("BaggageTags")
+                        .HasForeignKey("BookingBaggageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FlightBooking.Domain.Entities.Flights.Flight", "Flight")
+                        .WithMany()
+                        .HasForeignKey("FlightId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlightBooking.Domain.Entities.Bookings.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BookingBaggage");
+
+                    b.Navigation("Flight");
+
+                    b.Navigation("Ticket");
+                });
+
             modelBuilder.Entity("FlightBooking.Domain.Entities.Baggage.BookingBaggage", b =>
                 {
                     b.HasOne("FlightBooking.Domain.Entities.Bookings.Booking", "Booking")
@@ -1607,9 +1758,16 @@ namespace FlightBooking.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FlightBooking.Domain.Entities.Bookings.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Booking");
 
                     b.Navigation("Passenger");
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("FlightBooking.Domain.Entities.Bookings.Booking", b =>
@@ -1871,6 +2029,17 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Navigation("Airline");
                 });
 
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Users.FavoriteItem", b =>
+                {
+                    b.HasOne("FlightBooking.Domain.Entities.Users.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FlightBooking.Domain.Entities.Users.Passenger", b =>
                 {
                     b.HasOne("FlightBooking.Domain.Entities.Users.ApplicationUser", "User")
@@ -2003,6 +2172,11 @@ namespace FlightBooking.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Baggage.BookingBaggage", b =>
+                {
+                    b.Navigation("BaggageTags");
                 });
 
             modelBuilder.Entity("FlightBooking.Domain.Entities.Bookings.Booking", b =>

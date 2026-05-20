@@ -1,4 +1,4 @@
-﻿using FlightBooking.Domain.Common;
+using FlightBooking.Domain.Common;
 using FlightBooking.Domain.Entities.Seats;
 using FlightBooking.Domain.Enums;
 using System;
@@ -24,6 +24,8 @@ namespace FlightBooking.Domain.Entities.Flights
         public string FlightNumber { get; set; } = string.Empty;
 
         public FlightStatus Status { get; set; } = FlightStatus.Scheduled;
+        public int StopCount { get; set; }
+        public string? StopoverCodes { get; set; } // e.g. "DAD" or "DAD,CXR"
 
         // Navigation
         public ICollection<FlightSeat> FlightSeats { get; set; } = new List<FlightSeat>();

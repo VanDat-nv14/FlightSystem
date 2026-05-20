@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/useAuthStore';
+import { API_BASE_URL } from './config';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +38,7 @@ apiClient.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token');
         
         // Cố gắng lấy token mới
-        const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/Auth/refresh`, {
+        const res = await axios.post(`${API_BASE_URL}/Auth/refresh`, {
           refreshToken
         });
         

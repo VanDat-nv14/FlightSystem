@@ -3,8 +3,14 @@ using FlightBooking.Application.Features.Flights.DTOs;
 using FlightBooking.Application.Features.Flights.Interfaces;
 using FlightBooking.Domain.Entities.Flights;
 using FlightBooking.Domain.Entities.Seats;
+using FlightBooking.Domain.Enums;
 using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace FlightBooking.Infrastructure.Services
 {
@@ -29,12 +35,27 @@ namespace FlightBooking.Infrastructure.Services
             DepartureTime = f.DepartureTime,
             ArrivalTime = f.ArrivalTime,
             Status = f.Status.ToString(),
+            StopCount = f.StopCount,
+            StopoverCodes = f.StopoverCodes,
             BasePrice = f.BasePrice,
             AvailableSeats = availableSeats,
             AirlineCode = f.Aircraft?.Airline?.Code ?? string.Empty,
             AirlineName = f.Aircraft?.Airline?.Name ?? string.Empty,
             AirlineLogo = f.Aircraft?.Airline?.LogoUrl ?? string.Empty
         };
+
+        private async Task<Dictionary<int, int>> GetAvailableSeatCountsAsync(IEnumerable<int> flightIds)
+        {
+            var ids = flightIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return new Dictionary<int, int>();
+
+            return await _context.FlightSeats
+                .Where(s => ids.Contains(s.FlightId) && s.Status == SeatStatus.Available)
+                .GroupBy(s => s.FlightId)
+                .Select(g => new { FlightId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.FlightId, x => x.Count);
+        }
 
         public async Task<List<FlightDto>> GetAllAsync()
         {
@@ -44,12 +65,10 @@ namespace FlightBooking.Infrastructure.Services
                 .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
                 .ToListAsync();
 
+            var availableSeatCounts = await GetAvailableSeatCountsAsync(flights.Select(f => f.Id));
+
             return flights.Select(f =>
-            {
-                var available = _context.FlightSeats
-                    .Count(s => s.FlightId == f.Id && s.Status == Domain.Enums.SeatStatus.Available);
-                return MapToDto(f, available);
-            }).ToList();
+                MapToDto(f, availableSeatCounts.GetValueOrDefault(f.Id))).ToList();
         }
 
         public async Task<FlightDto> GetByIdAsync(int id)
@@ -76,12 +95,10 @@ namespace FlightBooking.Infrastructure.Services
                 .Where(f => f.Aircraft != null && f.Aircraft.AirlineId == airlineId)
                 .ToListAsync();
 
+            var availableSeatCounts = await GetAvailableSeatCountsAsync(flights.Select(f => f.Id));
+
             return flights.Select(f =>
-            {
-                var available = _context.FlightSeats
-                    .Count(s => s.FlightId == f.Id && s.Status == Domain.Enums.SeatStatus.Available);
-                return MapToDto(f, available);
-            }).ToList();
+                MapToDto(f, availableSeatCounts.GetValueOrDefault(f.Id))).ToList();
         }
 
         public async Task<List<FlightDto>> SearchAsync(SearchFlightRequest request)
@@ -203,6 +220,60 @@ namespace FlightBooking.Infrastructure.Services
             _context.Flights.Remove(flight);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> HoldSeatsAsync(int flightId, List<string> seatNumbers)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var seats = await _context.FlightSeats
+                    .Where(s => s.FlightId == flightId && seatNumbers.Contains(s.SeatNumber))
+                    .ToListAsync();
+
+                if (seats.Count != seatNumbers.Count)
+                    throw new BadRequestException("Một số ghế không tồn tại.");
+
+                if (seats.Any(s => s.Status != SeatStatus.Available))
+                    throw new BadRequestException("Một hoặc nhiều ghế đã được đặt hoặc đang được giữ bởi người khác.");
+
+                foreach (var seat in seats)
+                {
+                    seat.Status = SeatStatus.Reserved;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // Lên lịch Hangfire job để nhả ghế sau 10 phút
+                BackgroundJob.Schedule<IFlightService>(
+                    x => x.ReleaseHeldSeatsAsync(flightId, seatNumbers), 
+                    TimeSpan.FromMinutes(10));
+
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task ReleaseHeldSeatsAsync(int flightId, List<string> seatNumbers)
+        {
+            // Được gọi bởi Hangfire
+            var seats = await _context.FlightSeats
+                .Where(s => s.FlightId == flightId && seatNumbers.Contains(s.SeatNumber) && s.Status == SeatStatus.Reserved)
+                .ToListAsync();
+
+            if (seats.Any())
+            {
+                foreach (var seat in seats)
+                {
+                    seat.Status = SeatStatus.Available;
+                }
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

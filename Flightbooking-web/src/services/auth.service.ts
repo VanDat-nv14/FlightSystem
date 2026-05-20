@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { API_BASE_URL } from './config';
 import type { User } from '../stores/useAuthStore';
 
 export interface AuthResponse {
@@ -26,7 +27,7 @@ export const authService = {
 
   loginWithGoogle: () => {
     // Chuyển hướng người dùng sang endpoint xác thực của backend
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL}/Auth/login-google`;
+    window.location.href = `${API_BASE_URL}/Auth/login-google`;
   },
 
   logout: async (): Promise<void> => {

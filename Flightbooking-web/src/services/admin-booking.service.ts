@@ -17,6 +17,7 @@ export interface AdminTicketSummary {
 
 export interface AdminBooking {
   bookingId: number;
+  bookingCode: string;
   bookingStatus: string;
   bookingType: string;
   bookingDate: string;

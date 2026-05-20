@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, History, UserCircle, Plane } from "lucide-react"
+import { User, LogOut, History, UserCircle, Plane, Heart } from "lucide-react"
+import { NotificationBell } from "../components/customer/NotificationBell"
 
 export default function CustomerLayout() {
   const { isAuthenticated, user, logout } = useAuthStore()
@@ -33,46 +34,54 @@ export default function CustomerLayout() {
         <div className="ml-auto flex items-center space-x-4">
           <nav className="hidden md:flex items-center space-x-4 text-sm font-medium">
             <Link to="/flights" className="transition-colors hover:text-primary">Chuyến bay</Link>
+            {isAuthenticated && <Link to="/favorites" className="transition-colors hover:text-primary">Yêu thích</Link>}
             <Link to="#" className="transition-colors hover:text-primary">Ưu đãi</Link>
             <Link to="#" className="transition-colors hover:text-primary">Hỗ trợ</Link>
           </nav>
-          
+
           <div className="flex items-center space-x-2 ml-4">
             {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2">
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={user?.urlAvatar || ""} alt={user?.fullName || "User"} className="object-cover" />
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {user ? getInitials(user.fullName) : <User className="h-4 w-4" />}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline-block">{user?.fullName || "Tài khoản"}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
-                    <UserCircle className="w-4 h-4 mr-2" />
-                    Thông tin cá nhân
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/history")} className="cursor-pointer">
-                    <History className="w-4 h-4 mr-2" />
-                    Lịch sử đặt vé
-                  </DropdownMenuItem>
-                  {user?.role === "Admin" && (
-                    <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
-                      <Plane className="w-4 h-4 mr-2" />
-                      Quản lý hệ thống
+              <>
+                <NotificationBell />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={user?.urlAvatar || ""} alt={user?.fullName || "User"} className="object-cover" />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {user ? getInitials(user.fullName) : <User className="h-4 w-4" />}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden sm:inline-block">{user?.fullName || "Tài khoản"}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                      <UserCircle className="w-4 h-4 mr-2" />
+                      Thông tin cá nhân
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Đăng xuất
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuItem onClick={() => navigate("/history")} className="cursor-pointer">
+                      <History className="w-4 h-4 mr-2" />
+                      Lịch sử đặt vé
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/favorites")} className="cursor-pointer">
+                      <Heart className="w-4 h-4 mr-2" />
+                      Yêu thích
+                    </DropdownMenuItem>
+                    {user?.role === "Admin" && (
+                      <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
+                        <Plane className="w-4 h-4 mr-2" />
+                        Quản lý hệ thống
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <>
                 <Link to="/login" className="text-sm font-medium transition-colors hover:text-primary px-4 py-2">Đăng nhập</Link>

@@ -26,7 +26,11 @@ namespace FlightBooking.Infrastructure.Services
                 Code = request.Code.ToUpper(),
                 Name = request.Name,
                 City = request.City,
-                Country = request.Country
+                Country = request.Country,
+                IsFeatured = request.IsFeatured,
+                FeaturedImageUrl = request.FeaturedImageUrl,
+                FeaturedDescription = request.FeaturedDescription,
+                FeaturedDisplayOrder = request.FeaturedDisplayOrder
             };
             _context.Airports.Add(airport);
             await _context.SaveChangesAsync();
@@ -56,8 +60,15 @@ namespace FlightBooking.Infrastructure.Services
                     Name = a.Name,
                     Code = a.Code,
                     City = a.City,
-                    Country = a.Country
+                    Country = a.Country,
+                    IsFeatured = a.IsFeatured,
+                    FeaturedImageUrl = a.FeaturedImageUrl,
+                    FeaturedDescription = a.FeaturedDescription,
+                    FeaturedDisplayOrder = a.FeaturedDisplayOrder
                 })
+                .OrderByDescending(a => a.IsFeatured)
+                .ThenBy(a => a.FeaturedDisplayOrder)
+                .ThenBy(a => a.Code)
                 .ToListAsync();
         }
 
@@ -72,7 +83,11 @@ namespace FlightBooking.Infrastructure.Services
                 Code = airport.Code,
                 Name = airport.Name,
                 City = airport.City,
-                Country = airport.Country
+                Country = airport.Country,
+                IsFeatured = airport.IsFeatured,
+                FeaturedImageUrl = airport.FeaturedImageUrl,
+                FeaturedDescription = airport.FeaturedDescription,
+                FeaturedDisplayOrder = airport.FeaturedDisplayOrder
             };
         }
 
@@ -84,6 +99,10 @@ namespace FlightBooking.Infrastructure.Services
             airport.Name = request.Name;
             airport.City = request.City;
             airport.Country = request.Country;
+            airport.IsFeatured = request.IsFeatured;
+            airport.FeaturedImageUrl = request.FeaturedImageUrl;
+            airport.FeaturedDescription = request.FeaturedDescription;
+            airport.FeaturedDisplayOrder = request.FeaturedDisplayOrder;
             await _context.SaveChangesAsync();
             return true;
         }

@@ -174,7 +174,7 @@ export default function PartnerSettingsPage() {
               )}
             </div>
             <div className="mt-4 text-sm text-muted-foreground">
-              Trạng thái: <span className="font-medium text-foreground">{airline.status}</span>
+              Trạng thái: <span className="font-medium text-foreground">{{ Active: 'Hoạt động', Suspended: 'Tạm ngừng', Pending: 'Chờ duyệt' }[airline.status] || airline.status}</span>
             </div>
           </CardContent>
         </Card>

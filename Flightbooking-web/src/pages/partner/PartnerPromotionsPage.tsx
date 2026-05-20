@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { PaginationControl } from "@/components/ui/pagination-control";
 
 type PromotionStatus = "Active" | "Paused" | "Expired";
 
@@ -46,6 +47,8 @@ export default function PartnerPromotionsPage() {
   const { user } = useAuthStore();
   const [promotions, setPromotions] = useState<Promotion[]>(() => loadPromotions(user?.airlineId));
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -58,6 +61,9 @@ export default function PartnerPromotionsPage() {
     p.code.toLowerCase().includes(search.toLowerCase()) ||
     p.name.toLowerCase().includes(search.toLowerCase())
   ), [promotions, search]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedPromotions = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   function persist(next: Promotion[]) {
     setPromotions(next);
@@ -163,7 +169,7 @@ export default function PartnerPromotionsPage() {
       <div className="flex items-center gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm mã hoặc tên..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Tìm mã hoặc tên..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
         <Badge variant="outline">{filtered.length} mã</Badge>
       </div>
@@ -185,7 +191,7 @@ export default function PartnerPromotionsPage() {
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Chưa có khuyến mãi nào.</TableCell>
               </TableRow>
-            ) : filtered.map((item) => (
+            ) : paginatedPromotions.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-mono font-bold text-primary">{item.code}</TableCell>
                 <TableCell>{item.name}</TableCell>
@@ -203,6 +209,15 @@ export default function PartnerPromotionsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedPromotions.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> mã
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,8 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public DateTime DepartureTime { get; set; }
         public DateTime ArrivalTime { get; set; }
         public string Status { get; set; } = string.Empty;
+        public int StopCount { get; set; }
+        public string? StopoverCodes { get; set; }
         public decimal BasePrice { get; set; }
         public int AvailableSeats { get; set; }
 

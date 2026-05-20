@@ -8,8 +8,10 @@ import {
   AlertCircle,
   CheckCircle2,
   History,
-  Loader2
+  Loader2,
+  Briefcase
 } from "lucide-react"
+import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -158,7 +160,7 @@ function BookingCard({ booking, formatPrice, getStatusBadge }: { booking: Bookin
               </div>
               <div>
                 <p className="font-bold text-gray-900">{airline.name}</p>
-                <p className="text-xs text-gray-500">{firstTicket.flightNumber} • {firstTicket.seatClass}</p>
+                <p className="text-xs text-gray-500">{firstTicket.flightNumber} • {{ Economy: 'Phổ thông', Business: 'Thương gia', FirstClass: 'Hạng nhất' }[firstTicket.seatClass] || firstTicket.seatClass}</p>
               </div>
             </div>
             {getStatusBadge(booking.bookingStatus)}
@@ -204,14 +206,42 @@ function BookingCard({ booking, formatPrice, getStatusBadge }: { booking: Bookin
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
               <span className="text-gray-400 font-normal">Mã đặt chỗ:</span> 
-              <span className="bg-gray-100 px-2 py-0.5 rounded text-[#006CE4] font-mono">{booking.bookingId}</span>
+              <span className="bg-gray-100 px-2 py-0.5 rounded text-[#006CE4] font-mono">{booking.bookingCode || booking.bookingId}</span>
             </div>
           </div>
+
+          {booking.tickets.some(t => t.baggageTags?.length > 0) && (
+            <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+              <div className="mb-3 flex items-center gap-2 font-semibold text-blue-800">
+                <Briefcase className="h-4 w-4" />
+                Hành lý ký gửi
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {booking.tickets.flatMap(ticket => (ticket.baggageTags ?? []).map(tag => (
+                  <div key={tag.id} className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm">
+                    <QRCodeSVG value={tag.tagCode} size={64} />
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-bold text-[#006CE4]">{tag.tagCode}</div>
+                      <div className="text-xs text-gray-500">{ticket.passengerName} · {tag.weight}kg</div>
+                      <Badge variant="outline" className="mt-1 text-[11px]">
+                        {{ Pending: 'Đang chờ', Checked: 'Đã check-in', Loaded: 'Lên tàu bay', Delivered: 'Đã giao' }[tag.status] || tag.status}
+                      </Badge>
+                    </div>
+                  </div>
+                )))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Sidebar */}
         <div className="w-full lg:w-72 bg-gray-50 border-t lg:border-t-0 lg:border-l p-6 flex flex-col justify-between gap-6">
           <div className="space-y-4">
+            <div className="rounded-xl border bg-white p-3 text-center">
+              <QRCodeSVG value={booking.bookingCode || String(booking.bookingId)} size={92} className="mx-auto" />
+              <div className="mt-2 text-xs text-gray-500">QR check-in</div>
+              <div className="font-mono text-sm font-bold text-[#006CE4]">{booking.bookingCode || booking.bookingId}</div>
+            </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-500">Ngày đặt</span>
               <span className="font-medium">{new Date(booking.bookingDate).toLocaleDateString("vi-VN")}</span>

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { partnerTeamService } from "../../services/partner-team.service";
 import type { CreateUserRequest, UpdateUserRequest, UserListItem } from "../../services/user.service";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { PaginationControl } from "@/components/ui/pagination-control";
 
 interface TeamModalProps {
   mode: "create" | "edit";
@@ -78,6 +79,8 @@ export default function PartnerTeamPage() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuthStore();
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
   const [message, setMessage] = useState("");
@@ -119,6 +122,9 @@ export default function PartnerTeamPage() {
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   function handleSave(data: CreateUserRequest | UpdateUserRequest) {
     if (modalMode === "create") createMutation.mutate(data as CreateUserRequest);
     if (modalMode === "edit" && editingUser) updateMutation.mutate({ id: editingUser.id, data: data as UpdateUserRequest });
@@ -140,7 +146,7 @@ export default function PartnerTeamPage() {
       <div className="flex items-center gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm theo tên hoặc email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Tìm theo tên hoặc email..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
         <Badge variant="outline">{filtered.length} nhân sự</Badge>
       </div>
@@ -165,7 +171,7 @@ export default function PartnerTeamPage() {
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Chưa có nhân sự nào.</TableCell>
               </TableRow>
-            ) : filtered.map((item) => (
+            ) : paginatedUsers.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
                   <div className="font-medium">{item.fullName}</div>
@@ -193,6 +199,15 @@ export default function PartnerTeamPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedUsers.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> nhân sự
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       {modalMode && (
         <TeamModal

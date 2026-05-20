@@ -1,5 +1,5 @@
 import { motion } from "framer-motion"
-import { CheckCircle2, Ticket, Clock, AlertCircle, Download, Home, CreditCard } from "lucide-react"
+import { CheckCircle2, Ticket, Clock, AlertCircle, Download, Home, CreditCard, Plane } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -24,7 +24,14 @@ export default function BookingConfirmPage() {
   const isDeposit    = paymentType === "deposit" && remaining > 0
 
   return (
-    <div className="bg-gray-50 min-h-screen py-12">
+    <div className="relative min-h-screen overflow-hidden bg-gray-50 py-12">
+      <motion.div
+        className="pointer-events-none absolute left-[-80px] top-20 text-primary/20"
+        animate={{ x: ["0vw", "115vw"], y: [120, 20, -70], rotate: [22, 10, -4], opacity: [0, 1, 0] }}
+        transition={{ duration: 4.5, ease: "easeOut" }}
+      >
+        <Plane className="h-20 w-20 rotate-45" />
+      </motion.div>
       <div className="container px-4 max-w-lg mx-auto">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}

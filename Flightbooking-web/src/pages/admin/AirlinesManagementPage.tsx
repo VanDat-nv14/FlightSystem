@@ -162,12 +162,12 @@ export default function AirlinesManagementPage() {
           {STATUS_TABS.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab}
+              {{ Pending: 'Chờ duyệt', Approved: 'Đã duyệt', Rejected: 'Từ chối', Suspended: 'Tạm ngừng' }[tab] || tab}
               <span className="ml-1.5 text-xs opacity-60">
                 {tab === "Tất cả" ? counts.Tất_cả : counts[tab as keyof typeof counts]}
               </span>

@@ -29,6 +29,17 @@ namespace FlightBooking.API.Controllers.Bookings
             return OkResponse(tickets, $"Lấy danh sách vé của hãng thành công. Tổng: {tickets.Count} vé.");
         }
 
+        [HttpGet("lookup/{bookingCode}")]
+        public async Task<IActionResult> LookupByBookingCode(string bookingCode)
+        {
+            var claim = User.FindFirst("airlineId");
+            if (claim == null || !int.TryParse(claim.Value, out int airlineId))
+                return BadRequest("Không tìm thấy thông tin hãng bay trong token.");
+
+            var tickets = await _partnerBookingService.GetTicketsByBookingCodeAsync(airlineId, bookingCode);
+            return OkResponse(tickets, "Tìm booking thành công.");
+        }
+
         [HttpPatch("tickets/{ticketId:int}/check-in-status")]
         public async Task<IActionResult> UpdateTicketCheckInStatus(int ticketId, [FromBody] UpdateTicketCheckInStatusRequest request)
         {
@@ -38,6 +49,16 @@ namespace FlightBooking.API.Controllers.Bookings
 
             var ticket = await _partnerBookingService.UpdateTicketCheckInStatusAsync(airlineId, ticketId, request);
             return OkResponse(ticket, "Cập nhật trạng thái check-in thành công.");
+        }
+        [HttpPatch("baggage-tags/{tagId:int}/status")]
+        public async Task<IActionResult> UpdateBaggageTagStatus(int tagId, [FromBody] UpdateBaggageTagStatusRequest request)
+        {
+            var claim = User.FindFirst("airlineId");
+            if (claim == null || !int.TryParse(claim.Value, out int airlineId))
+                return BadRequest("Không tìm thấy thông tin hãng bay trong token.");
+
+            var tag = await _partnerBookingService.UpdateBaggageTagStatusAsync(airlineId, tagId, request);
+            return OkResponse(tag, "Cập nhật trạng thái hành lý thành công.");
         }
     }
 }

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { userService, type UserListItem, type CreateUserRequest, type UpdateUserRequest } from "../../services/user.service"
 import { airlineService } from "../../services/airline.service"
+import { PaginationControl } from "@/components/ui/pagination-control"
 
 const ROLES = ["Admin", "AirlineManager", "Employee", "Customer"]
 
@@ -138,6 +139,8 @@ function UserModal({ mode, user, onClose, onSave, isSaving }: UserModalProps) {
 export default function UsersPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null)
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
@@ -192,6 +195,9 @@ export default function UsersPage() {
     (u.airlineName ?? "").toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paginatedUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
   function handleSave(data: CreateUserRequest | UpdateUserRequest) {
     if (modalMode === "create") {
       createMutation.mutate(data as CreateUserRequest)
@@ -215,7 +221,7 @@ export default function UsersPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm kiếm theo tên, email, hãng bay..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Tìm kiếm theo tên, email, hãng bay..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
         <Badge variant="outline" className="text-sm">{filtered.length} người dùng</Badge>
       </div>
@@ -246,7 +252,7 @@ export default function UsersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(user => (
+              paginatedUsers.map(user => (
                 <TableRow key={user.id} className="group">
                   <TableCell>
                     <div className="font-medium">{user.fullName}</div>
@@ -321,6 +327,15 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedUsers.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> người dùng
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <AnimatePresence>
         {modalMode && (

@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { routeService } from "../../services/route.service"
+import { PaginationControl } from "@/components/ui/pagination-control"
 
 export default function PartnerRoutesPage() {
   const [search, setSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const { data: routes = [], isLoading: isRoutesLoading } = useQuery({
     queryKey: ["partner-routes"],
@@ -18,8 +21,12 @@ export default function PartnerRoutesPage() {
     r.originCode.toLowerCase().includes(search.toLowerCase()) ||
     r.destinationCode.toLowerCase().includes(search.toLowerCase()) ||
     r.originCity.toLowerCase().includes(search.toLowerCase()) ||
+    r.originCity.toLowerCase().includes(search.toLowerCase()) ||
     r.destinationCity.toLowerCase().includes(search.toLowerCase())
   )
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paginatedRoutes = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <div className="space-y-6">
@@ -37,7 +44,7 @@ export default function PartnerRoutesPage() {
             className="pl-9" 
             placeholder="Tìm kiếm theo mã, thành phố..." 
             value={search} 
-            onChange={e => setSearch(e.target.value)} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
           />
         </div>
         <Badge variant="outline" className="text-sm">{filtered.length} tuyến bay</Badge>
@@ -68,7 +75,7 @@ export default function PartnerRoutesPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(route => (
+              paginatedRoutes.map(route => (
                 <TableRow key={route.id}>
                   <TableCell>
                     <div className="flex items-center gap-2 font-bold text-primary">
@@ -107,6 +114,15 @@ export default function PartnerRoutesPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedRoutes.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> tuyến bay
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
     </div>
   )
 }

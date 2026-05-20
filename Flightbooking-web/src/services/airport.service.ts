@@ -8,6 +8,10 @@ export interface Airport {
   country: string;
   terminal?: string;
   timezone?: string;
+  isFeatured?: boolean;
+  featuredImageUrl?: string | null;
+  featuredDescription?: string | null;
+  featuredDisplayOrder?: number;
 }
 
 export const airportService = {

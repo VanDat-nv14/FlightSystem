@@ -51,7 +51,7 @@ namespace FlightBooking.API.Controllers.Flights
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Employee")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateFlightRequest request)
             => OkResponse(await _flightService.UpdateAsync(id, request), "Cập nhật chuyến bay thành công.");
 
@@ -59,5 +59,20 @@ namespace FlightBooking.API.Controllers.Flights
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
             => OkResponse(await _flightService.DeleteAsync(id), "Xóa chuyến bay thành công.");
+
+        [HttpPost("{id}/hold-seats")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("HoldSeatLimit")]
+        public async Task<IActionResult> HoldSeats(int id, [FromBody] List<string> seatNumbers)
+        {
+            try
+            {
+                var result = await _flightService.HoldSeatsAsync(id, seatNumbers);
+                return OkResponse(result, "Giữ ghế thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(ex.Message, 400);
+            }
+        }
     }
 }

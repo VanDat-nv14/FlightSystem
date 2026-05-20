@@ -29,6 +29,7 @@ import AircraftsPage from "../pages/admin/AircraftsPage"
 import BookingsPage from "../pages/admin/BookingsPage"
 import UsersPage from "../pages/admin/UsersPage"
 import AirlinesManagementPage from "../pages/admin/AirlinesManagementPage"
+import AdminReportsPage from "../pages/admin/AdminReportsPage"
 
 // Partner Pages
 import PartnerDashboardPage from "../pages/partner/PartnerDashboardPage"
@@ -72,6 +73,7 @@ export function Router() {
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="airlines" element={<AirlinesManagementPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
