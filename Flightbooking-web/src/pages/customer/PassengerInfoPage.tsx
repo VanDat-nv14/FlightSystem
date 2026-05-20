@@ -4,6 +4,7 @@ import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { bookingExtrasService } from "../../services/booking-extras.service"
+import { flightService } from "../../services/flight.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -120,7 +121,7 @@ export default function PassengerInfoPage() {
     { id: 3, name: "Thanh toán", status: "upcoming" as const },
   ]
 
-  function onSubmit(values: PassengerFormValues) {
+  async function onSubmit(values: PassengerFormValues) {
     // Tính tổng tiền cuối cùng (vé + hành lý + dịch vụ)
     const serviceTotal = values.passengers.reduce((acc, p) => {
       const baggage = baggageOptions.find(opt => opt.id === p.baggage)
@@ -134,20 +135,31 @@ export default function PassengerInfoPage() {
 
     const finalTotal = totalUrl + serviceTotal
 
-    // Lưu thông tin hành khách vào localStorage để dùng ở trang thanh toán
-    localStorage.setItem("draftPassengers", JSON.stringify(values.passengers))
+    try {
+      // Chỉ khóa ghế trước khi sang trang thanh toán (Late Locking)
+      if (seatsParam) {
+        const seatNumbersArray = seatsParam.split(",")
+        await flightService.holdSeats(Number(flightId), seatNumbersArray)
+      }
 
-    const params = new URLSearchParams({
-      flightId,
-      origin:        originCode,
-      destination:   destCode,
-      flightNumber,
-      total:         finalTotal.toString(),
-      service:       serviceTotal.toString(),
-      passengers:    passengerCount.toString(),
-      seats:         seatsParam,
-    })
-    navigate(`/payment?${params.toString()}`)
+      sessionStorage.setItem("draftPassengers", JSON.stringify(values.passengers))
+
+      const params = new URLSearchParams({
+        flightId,
+        origin:        originCode,
+        destination:   destCode,
+        flightNumber,
+        total:         finalTotal.toString(),
+        service:       serviceTotal.toString(),
+        passengers:    passengerCount.toString(),
+        seats:         seatsParam,
+      })
+      navigate(`/payment?${params.toString()}`)
+    } catch (error: any) {
+      console.error("Failed to hold seats:", error)
+      alert(error.response?.data?.message || "Xin lỗi, ghế bạn chọn vừa bị người khác đặt hoặc bạn đã giữ quá nhiều ghế cùng lúc.")
+      navigate(-1) // Trở lại trang chọn ghế
+    }
   }
 
   const watchedPassengers = useWatch({

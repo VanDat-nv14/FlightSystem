@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { adminBookingService, type AdminBooking } from "../../services/admin-booking.service"
+import { PaginationControl } from "@/components/ui/pagination-control"
 
 const BOOKING_STATUS_CONFIG: Record<string, {
   label: string
@@ -112,7 +113,9 @@ function BookingDetailPanel({ booking, onStatusChange, isUpdating }: {
                     </td>
                     <td className="px-3 py-2">
                       <span className="font-mono font-bold mr-1.5">{t.seatNumber}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${CLASS_PILL[t.seatClass] ?? ""}`}>{t.seatClass}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${CLASS_PILL[t.seatClass] ?? ""}`}>
+                        {{ Economy: 'Phổ thông', Business: 'Thương gia', FirstClass: 'Hạng nhất' }[t.seatClass] || t.seatClass}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-right font-medium">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(t.seatPrice)}
@@ -122,8 +125,8 @@ function BookingDetailPanel({ booking, onStatusChange, isUpdating }: {
                     </td>
                     <td className="px-3 py-2 text-xs">
                       {t.checkInStatus === "CheckedIn" || t.checkInStatus === "Boarded"
-                        ? <span className="text-green-600 font-medium">✅ {t.checkInStatus}</span>
-                        : <span className="text-muted-foreground">{t.checkInStatus}</span>
+                        ? <span className="text-green-600 font-medium">✅ {{ CheckedIn: 'Đã Check-in', Boarded: 'Lên máy bay' }[t.checkInStatus] || t.checkInStatus}</span>
+                        : <span className="text-muted-foreground">{{ NotCheckedIn: 'Chưa Check-in' }[t.checkInStatus] || t.checkInStatus}</span>
                       }
                     </td>
                   </tr>
@@ -140,6 +143,8 @@ function BookingDetailPanel({ booking, onStatusChange, isUpdating }: {
 export default function BookingsPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [statusFilter, setStatusFilter] = useState("all")
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
@@ -169,6 +174,9 @@ export default function BookingsPage() {
     const matchStatus = statusFilter === "all" || b.bookingStatus === statusFilter
     return matchSearch && matchStatus
   }), [bookings, search, statusFilter])
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paginatedBookings = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const stats = useMemo(() => ({
     total: bookings.length,
@@ -215,7 +223,7 @@ export default function BookingsPage() {
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm tên khách, email, mã booking..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Tìm tên khách, email, mã booking..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44">
@@ -261,7 +269,7 @@ export default function BookingsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(booking => (
+              paginatedBookings.map(booking => (
                 <>
                   <TableRow
                     key={booking.bookingId}
@@ -322,6 +330,15 @@ export default function BookingsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedBookings.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> booking
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
     </div>
   )
 }

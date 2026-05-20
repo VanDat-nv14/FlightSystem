@@ -61,7 +61,7 @@ export default function PaymentPage() {
   const [processing,    setProcessing]    = useState(false)
   const [errors,        setErrors]        = useState<Partial<CardForm>>({})
 
-  const grandTotal   = ctx.totalTicket + ctx.serviceFee
+  const grandTotal   = ctx.totalTicket
   const depositAmt   = Math.ceil(grandTotal * DEPOSIT_RATIO)
   const remainingAmt = grandTotal - depositAmt
   const dueDate      = new Date(Date.now() + DEPOSIT_DAYS * 86400_000)
@@ -69,7 +69,7 @@ export default function PaymentPage() {
   const amountToPay  = paymentType === "full" ? grandTotal : depositAmt
 
   const summaryItems = useMemo(() => [
-    { label: "Vé máy bay", value: ctx.totalTicket },
+    { label: "Vé máy bay", value: Math.max(ctx.totalTicket - ctx.serviceFee, 0) },
     ...(ctx.serviceFee > 0 ? [{ label: "Dịch vụ bổ sung", value: ctx.serviceFee }] : []),
   ], [ctx])
 
@@ -102,8 +102,8 @@ export default function PaymentPage() {
     setProcessing(true)
     
     try {
-      // 1. Lấy thông tin hành khách từ localStorage
-      const draftPassengersRaw = localStorage.getItem("draftPassengers")
+      // 1. Lấy thông tin hành khách từ sessionStorage
+      const draftPassengersRaw = sessionStorage.getItem("draftPassengers")
       if (!draftPassengersRaw) {
         alert("Không tìm thấy thông tin hành khách. Vui lòng quay lại bước trước.")
         setProcessing(false)
@@ -117,8 +117,8 @@ export default function PaymentPage() {
       // 3. Chuẩn bị payload
       const payload = {
         flightId: Number(ctx.flightId),
-        totalAmount: grandTotal,
         paymentType: paymentType === "deposit" ? "Deposit" : "Full",
+        paymentMethod,
         passengers: draftPassengers.map((p: any, idx: number) => ({
           title: p.title,
           firstName: p.firstName,
@@ -126,7 +126,9 @@ export default function PaymentPage() {
           dateOfBirth: p.dob,
           nationality: p.nationality,
           passportNumber: p.passportNumber,
-          seatNumber: seatList[idx] || ""
+          seatNumber: seatList[idx] || "",
+          baggageAllowanceId: p.baggage && p.baggage !== "none" ? Number(p.baggage) : undefined,
+          additionalServiceIds: (p.services ?? []).map((id: string) => Number(id))
         }))
       }
 
@@ -134,9 +136,13 @@ export default function PaymentPage() {
       const result = await bookingService.createBooking(payload)
       
       // 5. Xóa nháp và chuyển hướng
-      localStorage.removeItem("draftPassengers")
+      sessionStorage.removeItem("draftPassengers")
+      const confirmedTotal = result.totalAmount ?? grandTotal
+      const confirmedDeposit = Math.ceil(confirmedTotal * DEPOSIT_RATIO)
+      const confirmedRemaining = confirmedTotal - confirmedDeposit
+      const confirmedAmountPaid = paymentType === "deposit" ? confirmedDeposit : confirmedTotal
       
-      navigate(`/booking-confirm?bookingId=${result.bookingId}&pnr=${result.pnr}&paymentType=${paymentType}&amountPaid=${amountToPay}&remaining=${paymentType === "deposit" ? remainingAmt : 0}&dueDate=${dueDate.toISOString()}`)
+      navigate(`/booking-confirm?bookingId=${result.bookingId}&pnr=${result.pnr}&paymentType=${paymentType}&amountPaid=${confirmedAmountPaid}&remaining=${paymentType === "deposit" ? confirmedRemaining : 0}&dueDate=${dueDate.toISOString()}`)
     } catch (error: any) {
       console.error("Booking error:", error)
       alert(error.response?.data?.message || "Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.")

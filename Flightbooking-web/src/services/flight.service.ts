@@ -10,6 +10,8 @@ export interface Flight {
   departureTime: string;
   arrivalTime: string;
   status: string;
+  stopCount: number;
+  stopoverCodes?: string;   // "DAD" | "DAD,CXR" | null
   basePrice: number;
   availableSeats: number;
   airlineCode: string;
@@ -80,5 +82,10 @@ export const flightService = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/Flight/${id}`);
+  },
+
+  holdSeats: async (flightId: number, seatNumbers: string[]): Promise<boolean> => {
+    const response = await apiClient.post<{ data: boolean, message: string }>(`/Flight/${flightId}/hold-seats`, seatNumbers);
+    return response.data.data;
   }
 };

@@ -13,10 +13,25 @@ export interface TicketSummary {
   seatPrice: number;
   passengerName: string;
   checkInStatus: string;
+  baggageTags: BaggageTag[];
+}
+
+export interface BaggageTag {
+  id: number;
+  tagCode: string;
+  weight: number;
+  extraFee: number;
+  status: string;
+  createdAt: string;
+  checkedInAt?: string | null;
+  loadedAt?: string | null;
+  arrivedAt?: string | null;
+  claimedAt?: string | null;
 }
 
 export interface BookingResponse {
   bookingId: number;
+  bookingCode: string;
   bookingStatus: string;
   bookingType: string;
   bookingDate: string;

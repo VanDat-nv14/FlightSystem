@@ -13,9 +13,13 @@ namespace FlightBooking.Domain.Entities.Baggage
     {
         public  int BookingId { get; set; }
         public Booking? Booking { get; set; }
+        public int? TicketId { get; set; }
+        public Ticket? Ticket { get; set; }
         public int PassengerId { get; set; }
         public Passenger? Passenger { get; set; }
         public decimal Weight { get; set; }
         public decimal ExtraFee { get; set; }
+
+        public ICollection<BaggageTag> BaggageTags { get; set; } = new List<BaggageTag>();
     }
 }

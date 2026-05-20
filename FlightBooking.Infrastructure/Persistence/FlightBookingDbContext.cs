@@ -44,6 +44,7 @@ public class FlightBookingDbContext
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<UserLoginHistory> UserLoginHistories => Set<UserLoginHistory>();
     public DbSet<SavedPassenger> SavedPassengers => Set<SavedPassenger>();
+    public DbSet<FavoriteItem> FavoriteItems => Set<FavoriteItem>();
     public DbSet<UserPaymentMethod> UserPaymentMethods => Set<UserPaymentMethod>();
 
     // ── Payment System ─────────────────────────────────
@@ -53,6 +54,7 @@ public class FlightBookingDbContext
     // ── Baggage ────────────────────────────────────────
     public DbSet<BaggageAllowance> BaggageAllowances => Set<BaggageAllowance>();
     public DbSet<BookingBaggage> BookingBaggages => Set<BookingBaggage>();
+    public DbSet<BaggageTag> BaggageTags => Set<BaggageTag>();
 
     // ── Cancellation & Changes ─────────────────────────
     public DbSet<CancellationPolicy> CancellationPolicies => Set<CancellationPolicy>();
@@ -130,6 +132,9 @@ public class FlightBookingDbContext
             .HasForeignKey(b => b.GroupBookingId).OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Booking>()
+            .HasIndex(b => b.BookingCode).IsUnique();
+
+        modelBuilder.Entity<Booking>()
             .Property(b => b.TotalAmount).HasColumnType("decimal(18,2)");
 
         // ── Ticket ─────────────────────────────────────────────────────────────
@@ -171,6 +176,15 @@ public class FlightBookingDbContext
             .HasForeignKey<UserPreferences>(up => up.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<FavoriteItem>()
+            .HasOne(f => f.User).WithMany()
+            .HasForeignKey(f => f.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FavoriteItem>()
+            .HasIndex(f => new { f.UserId, f.ItemType, f.ItemId })
+            .IsUnique();
+
         // ── UserSession ────────────────────────────────────────────────────────
         modelBuilder.Entity<UserSession>()
             .HasIndex(s => s.RefreshToken).IsUnique();
@@ -208,9 +222,29 @@ public class FlightBookingDbContext
             .HasForeignKey(bb => bb.PassengerId).OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<BookingBaggage>()
+            .HasOne(bb => bb.Ticket).WithMany()
+            .HasForeignKey(bb => bb.TicketId).OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
+        modelBuilder.Entity<BookingBaggage>()
             .Property(bb => bb.Weight).HasColumnType("decimal(5,2)");
         modelBuilder.Entity<BookingBaggage>()
             .Property(bb => bb.ExtraFee).HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<BaggageTag>()
+            .HasIndex(bt => bt.TagCode).IsUnique();
+
+        modelBuilder.Entity<BaggageTag>()
+            .HasOne(bt => bt.BookingBaggage).WithMany(bb => bb.BaggageTags)
+            .HasForeignKey(bt => bt.BookingBaggageId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<BaggageTag>()
+            .HasOne(bt => bt.Ticket).WithMany()
+            .HasForeignKey(bt => bt.TicketId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<BaggageTag>()
+            .HasOne(bt => bt.Flight).WithMany()
+            .HasForeignKey(bt => bt.FlightId).OnDelete(DeleteBehavior.Restrict);
 
         // ── CancellationPolicy ─────────────────────────────────────────────────
         modelBuilder.Entity<CancellationPolicy>()

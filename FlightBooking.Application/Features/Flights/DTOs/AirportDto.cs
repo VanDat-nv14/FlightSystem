@@ -16,6 +16,10 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string Country { get; set; } = string.Empty;
         public string? Terminal { get; set; }
         public string? Timezone { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? FeaturedImageUrl { get; set; }
+        public string? FeaturedDescription { get; set; }
+        public int FeaturedDisplayOrder { get; set; }
     }
     public class CreateAirportRequest
     {
@@ -25,6 +29,10 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string Country { get; set; } = string.Empty;
         public string? Terminal { get; set; }
         public string? Timezone { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? FeaturedImageUrl { get; set; }
+        public string? FeaturedDescription { get; set; }
+        public int FeaturedDisplayOrder { get; set; }
     }
 
     public class UpdateAirportRequest
@@ -36,5 +44,9 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string Country { get; set; } = string.Empty;
         public string? Terminal { get; set; }
         public string? Timezone { get; set; }
+        public bool IsFeatured { get; set; }
+        public string? FeaturedImageUrl { get; set; }
+        public string? FeaturedDescription { get; set; }
+        public int FeaturedDisplayOrder { get; set; }
     }
 }

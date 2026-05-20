@@ -1,12 +1,10 @@
 using FlightBooking.Application.Common.Exceptions;
 using FlightBooking.Application.Features.Flights.DTOs;
 using FlightBooking.Application.Features.Flights.Interfaces;
+using FlightBooking.Domain.Entities.Logs;
 using FlightBooking.Domain.Enums;
 using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace FlightBooking.Infrastructure.Services
 {
@@ -46,6 +44,7 @@ namespace FlightBooking.Infrastructure.Services
             return bookings.Select(b => new AdminBookingDto
             {
                 BookingId = b.Id,
+                BookingCode = b.BookingCode,
                 BookingStatus = b.Status.ToString(),
                 BookingType = b.BookingType.ToString(),
                 BookingDate = b.BookingDate,
@@ -81,15 +80,87 @@ namespace FlightBooking.Infrastructure.Services
 
         public async Task<bool> UpdateStatusAsync(int bookingId, UpdateBookingStatusRequest request)
         {
-            var booking = await _context.Bookings.FindAsync(bookingId)
+            var booking = await _context.Bookings
+                .Include(b => b.Tickets)
+                    .ThenInclude(t => t.FlightSeat)
+                        .ThenInclude(fs => fs!.Flight)
+                .FirstOrDefaultAsync(b => b.Id == bookingId)
                 ?? throw new NotFoundException("Booking", bookingId);
 
-            if (!System.Enum.TryParse<BookingStatus>(request.Status, out var newStatus))
-                throw new BadRequestException($"Trạng thái '{request.Status}' không hợp lệ.");
+            if (!Enum.TryParse<BookingStatus>(request.Status, out var newStatus))
+                throw new BadRequestException($"Trang thai '{request.Status}' khong hop le.");
+
+            ValidateStatusTransition(booking.Status, newStatus);
+
+            if (newStatus == BookingStatus.Cancelled)
+                ValidateCanCancel(booking);
+
+            if (newStatus == BookingStatus.Completed)
+                ValidateCanComplete(booking);
 
             booking.Status = newStatus;
+
+            if (newStatus == BookingStatus.Cancelled)
+            {
+                foreach (var ticket in booking.Tickets)
+                {
+                    if (ticket.FlightSeat != null)
+                        ticket.FlightSeat.Status = SeatStatus.Available;
+                }
+            }
+
+            _context.NotificationLogs.Add(new NotificationLog
+            {
+                UserId = booking.UserId,
+                Type = NotificationType.Push,
+                Subject = "Cap nhat trang thai booking",
+                Content = $"Booking {booking.BookingCode} da chuyen sang trang thai {newStatus}.",
+                SentAt = DateTime.UtcNow,
+                IsRead = false
+            });
+
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        private static void ValidateStatusTransition(BookingStatus currentStatus, BookingStatus newStatus)
+        {
+            if (currentStatus == newStatus)
+                throw new BadRequestException("Booking dang o trang thai nay.");
+
+            if (currentStatus == BookingStatus.Cancelled)
+                throw new BadRequestException("Booking da huy la trang thai ket thuc, khong the cap nhat tiep.");
+
+            if (currentStatus == BookingStatus.Completed)
+                throw new BadRequestException("Booking da hoan thanh la trang thai ket thuc, khong the huy hoac cap nhat tiep.");
+
+            var allowed = currentStatus switch
+            {
+                BookingStatus.Pending => new[] { BookingStatus.Confirmed, BookingStatus.Cancelled },
+                BookingStatus.Confirmed => new[] { BookingStatus.Completed, BookingStatus.Cancelled },
+                _ => Array.Empty<BookingStatus>()
+            };
+
+            if (!allowed.Contains(newStatus))
+                throw new BadRequestException($"Khong the chuyen booking tu {currentStatus} sang {newStatus}.");
+        }
+
+        private static void ValidateCanCancel(FlightBooking.Domain.Entities.Bookings.Booking booking)
+        {
+            if (booking.Tickets.Any(t => t.CheckInStatus == CheckInStatus.CheckedIn || t.CheckInStatus == CheckInStatus.Boarded))
+                throw new BadRequestException("Khong the huy booking da check-in hoac da boarding.");
+
+            if (booking.Tickets.Any(t => t.FlightSeat?.Flight?.DepartureTime <= DateTime.UtcNow))
+                throw new BadRequestException("Khong the huy booking co chuyen bay da khoi hanh.");
+        }
+
+        private static void ValidateCanComplete(FlightBooking.Domain.Entities.Bookings.Booking booking)
+        {
+            if (booking.Status != BookingStatus.Confirmed)
+                throw new BadRequestException("Chi booking da xac nhan moi co the chuyen sang hoan thanh.");
+
+            if (booking.Tickets.Any(t => t.FlightSeat?.Flight?.ArrivalTime > DateTime.UtcNow))
+                throw new BadRequestException("Chi co the hoan thanh booking sau khi tat ca chuyen bay da ha canh.");
         }
     }
 }

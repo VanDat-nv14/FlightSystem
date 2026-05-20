@@ -24,10 +24,20 @@ function AirportModal({ mode, airport, onClose, onSave, isSaving }: AirportModal
   const [country, setCountry] = useState(airport?.country ?? "")
   const [terminal, setTerminal] = useState(airport?.terminal ?? "")
   const [timezone, setTimezone] = useState(airport?.timezone ?? "")
+  const [isFeatured, setIsFeatured] = useState(airport?.isFeatured ?? false)
+  const [featuredImageUrl, setFeaturedImageUrl] = useState(airport?.featuredImageUrl ?? "")
+  const [featuredDescription, setFeaturedDescription] = useState(airport?.featuredDescription ?? "")
+  const [featuredDisplayOrder, setFeaturedDisplayOrder] = useState(airport?.featuredDisplayOrder?.toString() ?? "0")
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSave({ code, name, city, country, terminal, timezone })
+    onSave({
+      code, name, city, country, terminal, timezone,
+      isFeatured,
+      featuredImageUrl: featuredImageUrl || null,
+      featuredDescription: featuredDescription || null,
+      featuredDisplayOrder: parseInt(featuredDisplayOrder) || 0
+    })
   }
 
   return (
@@ -68,6 +78,36 @@ function AirportModal({ mode, airport, onClose, onSave, isSaving }: AirportModal
               <Label>Múi giờ</Label>
               <Input value={timezone} onChange={e => setTimezone(e.target.value)} placeholder="VD: UTC+7" />
             </div>
+          </div>
+
+          <div className="pt-4 border-t mt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="checkbox"
+                id="isFeatured"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="isFeatured" className="cursor-pointer font-bold text-primary">Điểm đến nổi bật</Label>
+            </div>
+
+            {isFeatured && (
+              <div className="grid grid-cols-1 gap-4 bg-muted/30 p-4 rounded-lg border">
+                <div className="space-y-2">
+                  <Label>URL hình ảnh (Tỷ lệ 4:5)</Label>
+                  <Input value={featuredImageUrl} onChange={(e) => setFeaturedImageUrl(e.target.value)} placeholder="https://..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Mô tả ngắn gọn</Label>
+                  <Input value={featuredDescription} onChange={(e) => setFeaturedDescription(e.target.value)} placeholder="VD: Phố cổ, nhịp sống thủ đô..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Thứ tự hiển thị (0 là đầu tiên)</Label>
+                  <Input type="number" value={featuredDisplayOrder} onChange={(e) => setFeaturedDisplayOrder(e.target.value)} />
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Hủy</Button>
@@ -173,7 +213,14 @@ export default function AirportsPage() {
               filtered.map(airport => (
                 <TableRow key={airport.id}>
                   <TableCell className="font-bold text-primary">{airport.code}</TableCell>
-                  <TableCell className="font-medium">{airport.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{airport.name}</span>
+                      {airport.isFeatured && (
+                        <Badge variant="default" className="text-[10px] h-4 px-1.5 py-0 bg-rose-500 hover:bg-rose-600">Nổi bật</Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-muted-foreground" />

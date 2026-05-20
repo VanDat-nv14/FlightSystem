@@ -14,6 +14,10 @@ namespace FlightBooking.Domain.Entities.Flights
         public string Name { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string Country { get; set; } = string.Empty;
+        public bool IsFeatured { get; set; }
+        public string? FeaturedImageUrl { get; set; }
+        public string? FeaturedDescription { get; set; }
+        public int FeaturedDisplayOrder { get; set; }
 
         // Navigation Properties
         // Một sân bay có thể là điểm đi hoặc điểm đến của nhiều tuyến bay (Route)

@@ -17,5 +17,7 @@ namespace FlightBooking.Application.Features.Flights.Interfaces
             Task<List<FlightDto>> SearchAsync(SearchFlightRequest request);
             Task<bool> DeleteAsync(int id);
             Task<List<FlightSeatDto>> GetSeatsByFlightIdAsync(int flightId);
+            Task<bool> HoldSeatsAsync(int flightId, List<string> seatNumbers);
+            Task ReleaseHeldSeatsAsync(int flightId, List<string> seatNumbers);
     }
 }

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { flightService, type Flight, type CreateFlightRequest, type UpdateFlightRequest } from "../../services/flight.service"
 import { routeService } from "../../services/route.service"
 import { aircraftService } from "../../services/aircraft.service"
+import { PaginationControl } from "@/components/ui/pagination-control"
 
 const FLIGHT_STATUSES = ["Scheduled", "Boarding", "Departed", "Arrived", "Delayed", "Cancelled"]
 
@@ -165,6 +166,8 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
 export default function FlightsPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null)
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
@@ -198,6 +201,9 @@ export default function FlightsPage() {
     f.destinationCode.toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paginatedFlights = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
   function handleSave(data: any) {
     if (modalMode === "create") {
       createMutation.mutate(data)
@@ -228,7 +234,12 @@ export default function FlightsPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm kiếm mã, tuyến bay..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input 
+            className="pl-9" 
+            placeholder="Tìm kiếm mã, tuyến bay..." 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
         </div>
         <Badge variant="outline" className="text-sm">{filtered.length} chuyến bay</Badge>
       </div>
@@ -259,7 +270,7 @@ export default function FlightsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(flight => (
+              paginatedFlights.map(flight => (
                 <TableRow key={flight.id}>
                   <TableCell className="font-bold text-primary">{flight.flightNumber}</TableCell>
                   <TableCell>
@@ -283,7 +294,9 @@ export default function FlightsPage() {
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(flight.basePrice)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(flight.status)}>{flight.status}</Badge>
+                    <Badge variant={getStatusVariant(flight.status)}>
+                      {{ Scheduled: 'Lịch trình', Delayed: 'Hoãn', Boarding: 'Lên máy bay', InAir: 'Đang bay', Landed: 'Đã hạ cánh', Cancelled: 'Đã hủy' }[flight.status] || flight.status}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
@@ -316,6 +329,15 @@ export default function FlightsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
+          <div className="text-sm text-muted-foreground">
+            Hiển thị <span className="font-medium text-foreground">{paginatedFlights.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> chuyến bay
+          </div>
+          <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <AnimatePresence>
         {modalMode && (

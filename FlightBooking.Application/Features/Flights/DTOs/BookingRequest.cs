@@ -8,6 +8,7 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public int FlightId { get; set; }
         public decimal TotalAmount { get; set; }
         public string PaymentType { get; set; } = "Full"; // Full, Deposit
+        public string PaymentMethod { get; set; } = "card";
         public List<BookingPassengerDto> Passengers { get; set; } = new();
     }
 
@@ -20,6 +21,8 @@ namespace FlightBooking.Application.Features.Flights.DTOs
         public string Nationality { get; set; } = "Vietnam";
         public string PassportNumber { get; set; } = string.Empty;
         public string SeatNumber { get; set; } = string.Empty;
+        public int? BaggageAllowanceId { get; set; }
+        public List<int> AdditionalServiceIds { get; set; } = new();
     }
 
     public class BookingCreateResponse
