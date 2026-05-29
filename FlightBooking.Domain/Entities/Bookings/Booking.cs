@@ -31,5 +31,10 @@ namespace FlightBooking.Domain.Entities.Bookings
         public Booking? ReturnBooking { get; set; }
 
         public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+
+        // Deposit payment tracking
+        public bool IsDepositBooking { get; set; } = false;
+        public DateTime? DepositDeadline { get; set; }      // 72h after booking date
+        public decimal? RemainingAmount { get; set; }        // Remaining 70% to be paid
     }
 }

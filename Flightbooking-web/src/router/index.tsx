@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom"
 import CustomerLayout from "../layouts/CustomerLayout"
 import AdminLayout from "../layouts/AdminLayout"
 import PartnerLayout from "../layouts/PartnerLayout"
+import AirportLayout from "../layouts/AirportLayout"
 import ProtectedRoute from "./ProtectedRoute"
 
 // Customer Pages
@@ -12,6 +13,8 @@ import PassengerInfoPage from "../pages/customer/PassengerInfoPage"
 import PaymentPage from "../pages/customer/PaymentPage"
 import BookingConfirmPage from "../pages/customer/BookingConfirmPage"
 import BookingHistoryPage from "../pages/customer/BookingHistoryPage"
+import FavoritesPage from "../pages/customer/FavoritesPage"
+import PromotionsPage from "../pages/customer/PromotionsPage"
 
 // Auth Pages
 import LoginPage from "../pages/auth/LoginPage"
@@ -23,6 +26,7 @@ import ProfilePage from "../pages/account/ProfilePage"
 // Admin Pages
 import DashboardPage from "../pages/admin/DashboardPage"
 import FlightsPage from "../pages/admin/FlightsPage"
+import AdminSchedulesPage from "../pages/admin/AdminSchedulesPage"
 import AirportsPage from "../pages/admin/AirportsPage"
 import RoutesPage from "../pages/admin/RoutesPage"
 import AircraftsPage from "../pages/admin/AircraftsPage"
@@ -34,6 +38,7 @@ import AdminReportsPage from "../pages/admin/AdminReportsPage"
 // Partner Pages
 import PartnerDashboardPage from "../pages/partner/PartnerDashboardPage"
 import PartnerFlightsPage from "../pages/partner/PartnerFlightsPage"
+import PartnerSchedulesPage from "../pages/partner/PartnerSchedulesPage"
 import PartnerAircraftsPage from "../pages/partner/PartnerAircraftsPage"
 import PartnerFaresPage from "../pages/partner/PartnerFaresPage"
 import PartnerBookingsPage from "../pages/partner/PartnerBookingsPage"
@@ -42,6 +47,9 @@ import PartnerPromotionsPage from "../pages/partner/PartnerPromotionsPage"
 import PartnerReportsPage from "../pages/partner/PartnerReportsPage"
 import PartnerSettingsPage from "../pages/partner/PartnerSettingsPage"
 import PartnerTeamPage from "../pages/partner/PartnerTeamPage"
+
+// Airport Pages
+import AirportOpsPage from "../pages/airport/AirportOpsPage"
 
 export function Router() {
   return (
@@ -61,12 +69,15 @@ export function Router() {
         <Route path="payment" element={<PaymentPage />} />
         <Route path="booking-confirm" element={<BookingConfirmPage />} />
         <Route path="history" element={<BookingHistoryPage />} />
+        <Route path="favorites" element={<FavoritesPage />} />
+        <Route path="promotions" element={<PromotionsPage />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin", "Employee"]} />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="flights" element={<FlightsPage />} />
+          <Route path="schedules" element={<AdminSchedulesPage />} />
           <Route path="airports" element={<AirportsPage />} />
           <Route path="routes" element={<RoutesPage />} />
           <Route path="aircrafts" element={<AircraftsPage />} />
@@ -82,6 +93,7 @@ export function Router() {
         <Route path="/partner" element={<PartnerLayout />}>
           <Route index element={<PartnerDashboardPage />} />
           <Route path="flights" element={<PartnerFlightsPage />} />
+          <Route path="schedules" element={<PartnerSchedulesPage />} />
           <Route path="aircrafts" element={<PartnerAircraftsPage />} />
           <Route path="routes" element={<PartnerRoutesPage />} />
           <Route path="fares" element={<PartnerFaresPage />} />
@@ -91,6 +103,12 @@ export function Router() {
           <Route path="reports" element={<PartnerReportsPage />} />
           <Route path="settings" element={<PartnerSettingsPage />} />
           <Route path="team" element={<PartnerTeamPage />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["AirportStaff"]} />}>
+        <Route path="/airport" element={<AirportLayout />}>
+          <Route index element={<AirportOpsPage />} />
         </Route>
       </Route>
     </Routes>

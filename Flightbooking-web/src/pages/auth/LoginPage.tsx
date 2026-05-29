@@ -20,6 +20,7 @@ const loginSchema = z.object({
 function getRedirectPath(role?: string) {
   if (role === "Admin" || role === "Employee") return "/admin"
   if (role === "AirlineManager") return "/partner"
+  if (role === "AirportStaff") return "/airport"
   return "/"
 }
 
@@ -63,6 +64,8 @@ export default function LoginPage() {
         navigate("/admin")
       } else if (data.user.role === "AirlineManager") {
         navigate("/partner")
+      } else if (data.user.role === "AirportStaff") {
+        navigate("/airport")
       } else {
         navigate("/")
       }

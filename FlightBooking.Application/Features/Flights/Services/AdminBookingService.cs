@@ -1,18 +1,18 @@
 using FlightBooking.Application.Common.Exceptions;
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Application.Features.Flights.DTOs;
 using FlightBooking.Application.Features.Flights.Interfaces;
 using FlightBooking.Domain.Entities.Logs;
 using FlightBooking.Domain.Enums;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Flights.Services
 {
     public class AdminBookingService : IAdminBookingService
     {
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public AdminBookingService(FlightBookingDbContext context)
+        public AdminBookingService(IApplicationDbContext context)
         {
             _context = context;
         }
@@ -109,12 +109,21 @@ namespace FlightBooking.Infrastructure.Services
                 }
             }
 
+            string statusVi = newStatus switch
+            {
+                BookingStatus.Pending => "Chờ thanh toán",
+                BookingStatus.Confirmed => "Đã xác nhận",
+                BookingStatus.Completed => "Hoàn thành",
+                BookingStatus.Cancelled => "Đã hủy",
+                _ => newStatus.ToString()
+            };
+
             _context.NotificationLogs.Add(new NotificationLog
             {
                 UserId = booking.UserId,
                 Type = NotificationType.Push,
-                Subject = "Cap nhat trang thai booking",
-                Content = $"Booking {booking.BookingCode} da chuyen sang trang thai {newStatus}.",
+                Subject = "Cập nhật trạng thái đặt vé",
+                Content = $"Đơn đặt vé {booking.BookingCode} đã được chuyển sang trạng thái {statusVi}.",
                 SentAt = DateTime.UtcNow,
                 IsRead = false
             });

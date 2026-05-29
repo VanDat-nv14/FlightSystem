@@ -14,10 +14,12 @@ namespace FlightBooking.API.Controllers.Bookings
     public class BookingController : BaseController
     {
         private readonly IBookingService _bookingService;
+        private readonly ICancellationService _cancellationService;
 
-        public BookingController(IBookingService bookingService)
+        public BookingController(IBookingService bookingService, ICancellationService cancellationService)
         {
             _bookingService = bookingService;
+            _cancellationService = cancellationService;
         }
 
         private int GetCurrentUserId()
@@ -60,5 +62,40 @@ namespace FlightBooking.API.Controllers.Bookings
                 return ErrorResponse(ex.Message, 400);
             }
         }
+
+        [HttpGet("{id}/cancel-preview")]
+        public async Task<IActionResult> GetCancelPreview(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var preview = await _cancellationService.PreviewCancellationAsync(id, userId);
+                return OkResponse(preview, "Lấy thông tin xem trước hủy vé thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(ex.Message, 400);
+            }
+        }
+
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> CancelBooking(int id, [FromBody] CancelBookingRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _cancellationService.CancelBookingAsync(id, userId, request.Reason);
+                return OkResponse(result, "Hủy vé thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(ex.Message, 400);
+            }
+        }
+    }
+
+    public class CancelBookingRequest
+    {
+        public string Reason { get; set; } = string.Empty;
     }
 }

@@ -1,20 +1,20 @@
 using FlightBooking.Application.Common.Exceptions;
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Application.Features.Account.DTOs;
 using FlightBooking.Application.Features.Account.Interfaces;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Domain.Enums;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Account.Services
 {
     public class AccountService : IAccountService
     {
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public AccountService(FlightBookingDbContext context, UserManager<ApplicationUser> userManager)
+        public AccountService(IApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;

@@ -18,6 +18,7 @@ namespace FlightBooking.Domain.Entities.Users
         public DateTime CreateAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
         public int? AirlineId { get; set; }
+        public string? AirportCode { get; set; }
 
         // Navigation properties
         public UserProfile? UserProfile { get; set; }

@@ -21,5 +21,6 @@ namespace FlightBooking.Application.Features.Auth.DTOs
         public string Role { get; set; } = string.Empty;
         public string? UrlAvatar { get; set; }
         public int? AirlineId { get; set; }
+        public string? AirportCode { get; set; }
     }
 }

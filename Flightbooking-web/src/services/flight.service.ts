@@ -87,5 +87,15 @@ export const flightService = {
   holdSeats: async (flightId: number, seatNumbers: string[]): Promise<boolean> => {
     const response = await apiClient.post<{ data: boolean, message: string }>(`/Flight/${flightId}/hold-seats`, seatNumbers);
     return response.data.data;
+  },
+
+  getByAirport: async (airportCode: string): Promise<Flight[]> => {
+    const response = await apiClient.get<{ data: Flight[], message: string }>(`/Flight/by-airport/${airportCode}`);
+    return response.data.data;
+  },
+
+  updateStatus: async (id: number, status: string, delayReason?: string): Promise<Flight> => {
+    const response = await apiClient.post<{ data: Flight, message: string }>(`/Flight/${id}/status`, { status, delayReason });
+    return response.data.data;
   }
 };

@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { bookingExtrasService } from "../../services/booking-extras.service"
 import { flightService } from "../../services/flight.service"
+import { accountService } from "../../services/account.service"
+import { useAuthStore } from "../../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -53,6 +55,13 @@ type PassengerFormValues = z.infer<typeof passengerSchema>
 export default function PassengerInfoPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
+
+  const { data: profile } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: accountService.getProfile,
+    enabled: isAuthenticated
+  })
 
   // Đọc thông tin từ URL (truyền từ SeatSelectionPage)
   const flightId      = searchParams.get("flightId")      || ""
@@ -114,6 +123,57 @@ export default function PassengerInfoPage() {
     control: form.control,
     name: "passengers",
   })
+
+  const handleSameAsBookerChange = (index: number, checked: boolean) => {
+    if (checked && profile) {
+      // Tách Họ (từ đầu tiên) và Tên đệm & Tên (các từ còn lại)
+      let lastName = ""
+      let firstName = ""
+      if (profile.fullName) {
+        const parts = profile.fullName.trim().split(/\s+/)
+        if (parts.length > 0) {
+          lastName = parts[0].toUpperCase()
+          if (parts.length > 1) {
+            firstName = parts.slice(1).join(" ").toUpperCase()
+          }
+        }
+      }
+
+      // Xác định danh xưng từ giới tính
+      let title = ""
+      if (profile.gender) {
+        const g = profile.gender.toLowerCase()
+        if (g === "male" || g === "nam" || g === "1") {
+          title = "mr"
+        } else if (g === "female" || g === "nữ" || g === "nu" || g === "0") {
+          title = "mrs"
+        }
+      }
+
+      // Định dạng ngày
+      const dob = profile.dateOfBirth ? profile.dateOfBirth.split("T")[0] : ""
+      const passportExpiry = profile.passportExpiry ? profile.passportExpiry.split("T")[0] : ""
+
+      form.setValue(`passengers.${index}.title`, title, { shouldValidate: true })
+      form.setValue(`passengers.${index}.lastName`, lastName, { shouldValidate: true })
+      form.setValue(`passengers.${index}.firstName`, firstName, { shouldValidate: true })
+      form.setValue(`passengers.${index}.dob`, dob, { shouldValidate: true })
+      form.setValue(`passengers.${index}.nationality`, profile.nationality || "Vietnam", { shouldValidate: true })
+      form.setValue(`passengers.${index}.passportNumber`, profile.passportNumber || profile.idCardNumber || "", { shouldValidate: true })
+      if (passportExpiry) {
+        form.setValue(`passengers.${index}.passportExpiry`, passportExpiry, { shouldValidate: true })
+      }
+    } else {
+      // Xóa thông tin khi bỏ chọn
+      form.setValue(`passengers.${index}.title`, "")
+      form.setValue(`passengers.${index}.lastName`, "")
+      form.setValue(`passengers.${index}.firstName`, "")
+      form.setValue(`passengers.${index}.dob`, "")
+      form.setValue(`passengers.${index}.nationality`, "Vietnam")
+      form.setValue(`passengers.${index}.passportNumber`, "")
+      form.setValue(`passengers.${index}.passportExpiry`, "")
+    }
+  }
 
   const steps = [
     { id: 1, name: "Chọn chỗ ngồi", status: "complete" as const },
@@ -231,25 +291,35 @@ export default function PassengerInfoPage() {
                     </CardHeader>
                     <CardContent className="p-6 space-y-8">
                       {/* Checkbox Same as Booker */}
-                      <FormField
-                        control={formControl}
-                        name={`passengers.${index}.sameAsBooker`}
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-primary/5 p-4 rounded-lg">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel className="text-sm font-medium text-slate-700">
-                                Dùng thông tin của tôi (người đặt vé)
-                              </FormLabel>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
+                      {isAuthenticated ? (
+                        <FormField
+                          control={formControl}
+                          name={`passengers.${index}.sameAsBooker`}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-primary/5 p-4 rounded-lg">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked)
+                                    handleSameAsBookerChange(index, checked === true)
+                                  }}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel className="text-sm font-medium text-slate-700">
+                                  Dùng thông tin của tôi (người đặt vé)
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      ) : (
+                        <div className="text-sm text-slate-500 bg-slate-50 p-4 rounded-lg border border-slate-100 flex items-center gap-2">
+                          <span>💡</span>
+                          <span>Hãy <a href="/login" className="text-primary hover:underline font-medium">đăng nhập</a> để sử dụng tính năng tự điền thông tin nhanh chóng.</span>
+                        </div>
+                      )}
 
                       {/* Passenger Details */}
                       <div className="grid grid-cols-1 md:grid-cols-6 gap-6">

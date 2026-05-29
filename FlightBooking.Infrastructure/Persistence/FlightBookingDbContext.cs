@@ -5,16 +5,18 @@ using FlightBooking.Domain.Entities.Flights;
 using FlightBooking.Domain.Entities.Logs;
 using FlightBooking.Domain.Entities.Loyalty;
 using FlightBooking.Domain.Entities.Payments;
+using FlightBooking.Domain.Entities.Promotions;
 using FlightBooking.Domain.Entities.Seats;
 using FlightBooking.Domain.Entities.Services;
 using FlightBooking.Domain.Entities.Users;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using FlightBooking.Application.Common.Interfaces;
 
 namespace FlightBooking.Infrastructure.Persistence;
 
 public class FlightBookingDbContext
-    : IdentityDbContext<ApplicationUser, ApplicationRole, int>
+    : IdentityDbContext<ApplicationUser, ApplicationRole, int>, IApplicationDbContext
 {
     public FlightBookingDbContext(DbContextOptions<FlightBookingDbContext> options)
         : base(options) { }
@@ -26,6 +28,9 @@ public class FlightBookingDbContext
     public DbSet<Route> Routes => Set<Route>();
     public DbSet<FlightSchedule> FlightSchedules => Set<FlightSchedule>();
     public DbSet<Flight> Flights => Set<Flight>();
+
+    // ── Promotions ───────────────────────────────────
+    public DbSet<Promotion> Promotions => Set<Promotion>();
 
     // ── Seat Management ────────────────────────────────
     public DbSet<SeatConfiguration> SeatConfigurations => Set<SeatConfiguration>();
@@ -77,6 +82,16 @@ public class FlightBookingDbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // ── Promotion ─────────────────────────────────────────
+        modelBuilder.Entity<Promotion>()
+            .HasIndex(p => p.Code).IsUnique();
+
+        modelBuilder.Entity<Promotion>()
+            .HasOne(p => p.Airline)
+            .WithMany()
+            .HasForeignKey(p => p.AirlineId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // ── Route ──────────────────────────────────────────────────────────────
         modelBuilder.Entity<Route>()
             .HasOne(r => r.OriginAirport)
@@ -105,6 +120,22 @@ public class FlightBookingDbContext
         modelBuilder.Entity<Flight>()
             .HasOne(f => f.Schedule).WithMany(s => s.Flights)
             .HasForeignKey(f => f.ScheduleId).OnDelete(DeleteBehavior.Restrict);
+
+        // ── FlightSchedule ──────────────────────────────────────────────────────
+        modelBuilder.Entity<FlightSchedule>()
+            .Property(s => s.BasePrice).HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<FlightSchedule>()
+            .HasOne(s => s.Route).WithMany()
+            .HasForeignKey(s => s.RouteId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FlightSchedule>()
+            .HasOne(s => s.Aircraft).WithMany()
+            .HasForeignKey(s => s.AircraftId).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FlightSchedule>()
+            .HasOne(s => s.Airline).WithMany()
+            .HasForeignKey(s => s.AirlineId).OnDelete(DeleteBehavior.SetNull);
 
         // ── SeatConfiguration ──────────────────────────────────────────────────
         modelBuilder.Entity<SeatConfiguration>()
@@ -136,6 +167,9 @@ public class FlightBookingDbContext
 
         modelBuilder.Entity<Booking>()
             .Property(b => b.TotalAmount).HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<Booking>()
+            .Property(b => b.RemainingAmount).HasColumnType("decimal(18,2)");
 
         // ── Ticket ─────────────────────────────────────────────────────────────
         modelBuilder.Entity<Ticket>()
@@ -251,6 +285,9 @@ public class FlightBookingDbContext
             .Property(c => c.RefundPercentage).HasColumnType("decimal(5,2)");
         modelBuilder.Entity<CancellationPolicy>()
             .Property(c => c.FeeAmount).HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<BookingCancellation>()
+            .Property(bc => bc.RefundAmount).HasColumnType("decimal(18,2)");
 
         // ── TicketChange ───────────────────────────────────────────────────────
         modelBuilder.Entity<TicketChange>()

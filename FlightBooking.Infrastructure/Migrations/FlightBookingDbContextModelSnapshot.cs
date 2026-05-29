@@ -170,8 +170,17 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DepositDeadline")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("GroupBookingId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsDepositBooking")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("RemainingAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("ReturnBookingId")
                         .HasColumnType("int");
@@ -574,12 +583,27 @@ namespace FlightBooking.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AircraftId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AirlineId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("ArrivalTime")
+                        .HasColumnType("time");
+
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DaysOfWeek")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<TimeSpan>("DepartureTime")
+                        .HasColumnType("time");
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
@@ -588,6 +612,12 @@ namespace FlightBooking.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RouteId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -595,6 +625,12 @@ namespace FlightBooking.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AircraftId");
+
+                    b.HasIndex("AirlineId");
+
+                    b.HasIndex("RouteId");
 
                     b.ToTable("FlightSchedules");
                 });
@@ -892,6 +928,54 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.ToTable("Refunds");
                 });
 
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Promotions.Promotion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AirlineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AirlineId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Promotions");
+                });
+
             modelBuilder.Entity("FlightBooking.Domain.Entities.Seats.FlightSeat", b =>
                 {
                     b.Property<int>("Id")
@@ -1084,6 +1168,9 @@ namespace FlightBooking.Infrastructure.Migrations
 
                     b.Property<int?>("AirlineId")
                         .HasColumnType("int");
+
+                    b.Property<string>("AirportCode")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -1889,6 +1976,32 @@ namespace FlightBooking.Infrastructure.Migrations
                     b.Navigation("Schedule");
                 });
 
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Flights.FlightSchedule", b =>
+                {
+                    b.HasOne("FlightBooking.Domain.Entities.Flights.Aircraft", "Aircraft")
+                        .WithMany()
+                        .HasForeignKey("AircraftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlightBooking.Domain.Entities.Flights.Airline", "Airline")
+                        .WithMany()
+                        .HasForeignKey("AirlineId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FlightBooking.Domain.Entities.Flights.Route", "Route")
+                        .WithMany()
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Aircraft");
+
+                    b.Navigation("Airline");
+
+                    b.Navigation("Route");
+                });
+
             modelBuilder.Entity("FlightBooking.Domain.Entities.Flights.Route", b =>
                 {
                     b.HasOne("FlightBooking.Domain.Entities.Flights.Airport", "DestinationAirport")
@@ -1976,6 +2089,16 @@ namespace FlightBooking.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("FlightBooking.Domain.Entities.Promotions.Promotion", b =>
+                {
+                    b.HasOne("FlightBooking.Domain.Entities.Flights.Airline", "Airline")
+                        .WithMany()
+                        .HasForeignKey("AirlineId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Airline");
                 });
 
             modelBuilder.Entity("FlightBooking.Domain.Entities.Seats.FlightSeat", b =>

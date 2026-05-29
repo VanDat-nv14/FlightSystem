@@ -34,8 +34,8 @@ export default function CustomerLayout() {
         <div className="ml-auto flex items-center space-x-4">
           <nav className="hidden md:flex items-center space-x-4 text-sm font-medium">
             <Link to="/flights" className="transition-colors hover:text-primary">Chuyến bay</Link>
-            {isAuthenticated && <Link to="/favorites" className="transition-colors hover:text-primary">Yêu thích</Link>}
-            <Link to="#" className="transition-colors hover:text-primary">Ưu đãi</Link>
+            <Link to="/favorites" className="transition-colors hover:text-primary">Yêu thích</Link>
+            <Link to="/promotions" className="transition-colors hover:text-primary">Ưu đãi</Link>
             <Link to="#" className="transition-colors hover:text-primary">Hỗ trợ</Link>
           </nav>
 

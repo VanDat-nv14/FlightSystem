@@ -1,4 +1,6 @@
 using FlightBooking.Application.Common.Exceptions;
+using FlightBooking.Application.Common.Interfaces;
+using FlightBooking.Application.Features.Email.Interfaces;
 using FlightBooking.Application.Features.Flights.DTOs;
 using FlightBooking.Application.Features.Flights.Interfaces;
 using FlightBooking.Domain.Entities.Baggage;
@@ -8,21 +10,22 @@ using FlightBooking.Domain.Entities.Seats;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Domain.Entities.Logs;
 using FlightBooking.Domain.Enums;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Flights.Services
 {
     public class BookingService : IBookingService
     {
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public BookingService(FlightBookingDbContext context)
+        public BookingService(IApplicationDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<List<AdminBookingDto>> GetMyBookingsAsync(int userId)
@@ -244,6 +247,13 @@ namespace FlightBooking.Infrastructure.Services
                     ? Math.Ceiling(calculatedTotalAmount * 0.30m)
                     : calculatedTotalAmount;
 
+                if (isDeposit)
+                {
+                    booking.IsDepositBooking = true;
+                    booking.DepositDeadline = DateTime.UtcNow.AddHours(72);
+                    booking.RemainingAmount = calculatedTotalAmount - amountToPay;
+                }
+
                 _context.Payments.Add(new Payment
                 {
                     BookingId = booking.Id,
@@ -258,14 +268,36 @@ namespace FlightBooking.Infrastructure.Services
                 {
                     UserId = userId,
                     Type = NotificationType.Push,
-                    Subject = "Dat ve thanh cong",
-                    Content = $"Booking {booking.BookingCode} da duoc tao voi tong tien {calculatedTotalAmount:N0} VND.",
+                    Subject = "Đặt vé thành công",
+                    Content = $"Đơn đặt vé {booking.BookingCode} đã được tạo thành công với tổng tiền {calculatedTotalAmount:N0} VND.",
                     SentAt = DateTime.UtcNow,
                     IsRead = false
                 });
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                // Gửi email xác nhận đặt vé (ngoài transaction để tránh ảnh hưởng luồng chính nếu lỗi gửi mail)
+                try
+                {
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null && !string.IsNullOrEmpty(user.Email))
+                    {
+                        await _emailService.SendBookingConfirmAsync(
+                            user.Email,
+                            user.FullName ?? "Khách hàng",
+                            booking.BookingCode,
+                            booking.TotalAmount,
+                            booking.IsDepositBooking,
+                            booking.IsDepositBooking ? amountToPay : null,
+                            booking.DepositDeadline
+                        );
+                    }
+                }
+                catch
+                {
+                    // Lỗi gửi email không làm ảnh hưởng đến việc tạo booking thành công
+                }
 
                 return new BookingCreateResponse
                 {

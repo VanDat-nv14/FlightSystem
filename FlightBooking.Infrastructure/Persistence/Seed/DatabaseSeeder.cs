@@ -1,3 +1,4 @@
+using FlightBooking.Domain.Entities.Flights;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -24,7 +25,7 @@ public static class DatabaseSeeder
         await dbContext.Database.MigrateAsync();
 
         // 2. Tạo các Role mặc định nếu chưa tồn tại
-        string[] roles = { "Admin", "Employee", "Customer", "AirlineManager" };
+        string[] roles = { "Admin", "Employee", "Customer", "AirlineManager", "AirportStaff" };
         foreach (var roleName in roles)
         {
             if (!await roleManager.RoleExistsAsync(roleName))
@@ -280,9 +281,83 @@ public static class DatabaseSeeder
         }
         await dbContext.SaveChangesAsync();
 
+        // 9.5. Seed Flight Schedules (phụ thuộc Route và Aircraft và Airline)
+        if (!await dbContext.FlightSchedules.AnyAsync())
+        {
+            var dbAirlines = await dbContext.Airlines.ToDictionaryAsync(a => a.Code, a => a.Id);
+            var dbAircrafts = await dbContext.Aircrafts.ToDictionaryAsync(a => a.RegistrationNumber, a => a.Id);
+            var dbRoutes = await dbContext.Routes
+                .Include(r => r.OriginAirport)
+                .Include(r => r.DestinationAirport)
+                .ToListAsync();
+
+            // Định nghĩa danh sách các Lịch bay mẫu
+            var scheduleSeeds = new[]
+            {
+                // Template Flights
+                (FlightNum: "VN201", Origin: "SGN", Dest: "HAN", RegNum: "VN-A321-01", Dep: "06:00", Arr: "08:05", Days: "1,3,5", Price: 1800000m, AirlineCode: "VN"),
+                (FlightNum: "VN202", Origin: "HAN", Dest: "SGN", RegNum: "VN-A321-02", Dep: "08:00", Arr: "10:05", Days: "1,3,5", Price: 1800000m, AirlineCode: "VN"),
+                (FlightNum: "VJ301", Origin: "SGN", Dest: "HAN", RegNum: "VJ-A320-01", Dep: "07:00", Arr: "09:05", Days: "0,1,2,3,4,5,6", Price: 1200000m, AirlineCode: "VJ"),
+                (FlightNum: "VJ302", Origin: "HAN", Dest: "SGN", RegNum: "VJ-A320-02", Dep: "10:00", Arr: "12:05", Days: "0,1,2,3,4,5,6", Price: 1200000m, AirlineCode: "VJ"),
+                (FlightNum: "VN203", Origin: "SGN", Dest: "DAD", RegNum: "VN-B789-01", Dep: "10:00", Arr: "11:20", Days: "1,2,3,4,5,6", Price: 1500000m, AirlineCode: "VN"),
+                (FlightNum: "BL401", Origin: "SGN", Dest: "DAD", RegNum: "BL-E190-01", Dep: "13:00", Arr: "14:20", Days: "2,4,6", Price: 1100000m, AirlineCode: "BL"),
+                (FlightNum: "VN204", Origin: "DAD", Dest: "SGN", RegNum: "VN-A321-01", Dep: "14:00", Arr: "15:20", Days: "1,2,3,4,5,6", Price: 1500000m, AirlineCode: "VN"),
+                (FlightNum: "VJ303", Origin: "HAN", Dest: "DAD", RegNum: "VJ-A321-01", Dep: "06:00", Arr: "07:10", Days: "0,2,4,6", Price: 1300000m, AirlineCode: "VJ"),
+                (FlightNum: "BL402", Origin: "DAD", Dest: "HAN", RegNum: "BL-A319-01", Dep: "16:00", Arr: "17:10", Days: "1,3,5", Price: 1100000m, AirlineCode: "BL"),
+                (FlightNum: "VN205", Origin: "SGN", Dest: "CXR", RegNum: "VN-A321-02", Dep: "08:00", Arr: "08:55", Days: "2,4,6", Price: 900000m, AirlineCode: "VN"),
+                (FlightNum: "VJ304", Origin: "SGN", Dest: "PQC", RegNum: "VJ-A320-01", Dep: "09:00", Arr: "09:50", Days: "0,1,2,3,4,5,6", Price: 850000m, AirlineCode: "VJ"),
+                (FlightNum: "QH501", Origin: "SGN", Dest: "VCA", RegNum: "QH-A320-01", Dep: "11:00", Arr: "11:40", Days: "1,3,5", Price: 750000m, AirlineCode: "QH"),
+                (FlightNum: "VN206", Origin: "HAN", Dest: "HPH", RegNum: "VN-B789-01", Dep: "07:00", Arr: "07:35", Days: "1,2,3,4,5", Price: 700000m, AirlineCode: "VN"),
+                (FlightNum: "BL403", Origin: "HAN", Dest: "HUI", RegNum: "BL-B789-01", Dep: "15:00", Arr: "16:05", Days: "2,4,6", Price: 1200000m, AirlineCode: "BL"),
+                (FlightNum: "QH502", Origin: "DAD", Dest: "CXR", RegNum: "QH-A321-01", Dep: "12:00", Arr: "13:00", Days: "1,3,5", Price: 950000m, AirlineCode: "QH"),
+
+                // Supplemental Flights
+                (FlightNum: "BN701", Origin: "SGN", Dest: "DAD", RegNum: "BN-A320-01", Dep: "17:00", Arr: "18:20", Days: "1,3,5", Price: 980000m, AirlineCode: "BN"),
+                (FlightNum: "BN702", Origin: "DAD", Dest: "SGN", RegNum: "BN-A320-01", Dep: "18:00", Arr: "19:20", Days: "1,3,5", Price: 980000m, AirlineCode: "BN"),
+                (FlightNum: "BN711", Origin: "SGN", Dest: "HAN", RegNum: "BN-A320-01", Dep: "20:00", Arr: "23:00", Days: "2,4,6", Price: 1150000m, AirlineCode: "BN"),
+                (FlightNum: "0V801", Origin: "SGN", Dest: "PQC", RegNum: "0V-ATR-01", Dep: "06:00", Arr: "06:50", Days: "0,1,2,3,4,5,6", Price: 720000m, AirlineCode: "0V"),
+                (FlightNum: "0V802", Origin: "PQC", Dest: "SGN", RegNum: "0V-ATR-01", Dep: "19:00", Arr: "19:50", Days: "0,1,2,3,4,5,6", Price: 720000m, AirlineCode: "0V"),
+                (FlightNum: "0V811", Origin: "SGN", Dest: "VCA", RegNum: "0V-ATR-01", Dep: "21:00", Arr: "22:35", Days: "1,3,5", Price: 640000m, AirlineCode: "0V"),
+                (FlightNum: "SQ901", Origin: "SGN", Dest: "SIN", RegNum: "SQ-B773-01", Dep: "10:00", Arr: "13:05", Days: "0,1,2,3,4,5,6", Price: 2400000m, AirlineCode: "SQ"),
+                (FlightNum: "SQ902", Origin: "SIN", Dest: "SGN", RegNum: "SQ-B773-01", Dep: "15:00", Arr: "18:05", Days: "0,1,2,3,4,5,6", Price: 2400000m, AirlineCode: "SQ"),
+                (FlightNum: "SQ911", Origin: "HAN", Dest: "SIN", RegNum: "SQ-A388-01", Dep: "23:00", Arr: "03:25", Days: "1,3,5", Price: 3200000m, AirlineCode: "SQ"),
+                (FlightNum: "VN801", Origin: "SGN", Dest: "DAD", RegNum: "VN-A321-01", Dep: "22:00", Arr: "23:55", Days: "2,4,6", Price: 1450000m, AirlineCode: "VN"),
+                (FlightNum: "VJ801", Origin: "SGN", Dest: "DAD", RegNum: "VJ-A320-01", Dep: "05:00", Arr: "07:30", Days: "1,3,5", Price: 1050000m, AirlineCode: "VJ")
+            };
+
+            var schedulesToCreate = new List<FlightSchedule>();
+            foreach (var seed in scheduleSeeds)
+            {
+                var route = dbRoutes.FirstOrDefault(r => r.OriginAirport?.Code == seed.Origin && r.DestinationAirport?.Code == seed.Dest);
+                if (route == null) continue;
+
+                if (!dbAircrafts.TryGetValue(seed.RegNum, out var aircraftId)) continue;
+                dbAirlines.TryGetValue(seed.AirlineCode, out var airlineId);
+
+                schedulesToCreate.Add(new FlightSchedule
+                {
+                    FlightNumber = seed.FlightNum,
+                    DaysOfWeek = seed.Days,
+                    StartDate = DateTime.UtcNow.Date,
+                    EndDate = DateTime.UtcNow.Date.AddMonths(6),
+                    RouteId = route.Id,
+                    AircraftId = aircraftId,
+                    DepartureTime = TimeSpan.Parse(seed.Dep),
+                    ArrivalTime = TimeSpan.Parse(seed.Arr),
+                    BasePrice = seed.Price,
+                    IsActive = true,
+                    AirlineId = airlineId > 0 ? airlineId : (int?)null
+                });
+            }
+
+            dbContext.FlightSchedules.AddRange(schedulesToCreate);
+            await dbContext.SaveChangesAsync();
+        }
+
         // 10. Seed Flights (phụ thuộc Route và Aircraft) — nhiều ngày T+1..T+14
         if (!await dbContext.Flights.AnyAsync())
         {
+            var dbSchedules = await dbContext.FlightSchedules.ToDictionaryAsync(s => s.FlightNumber, s => s.Id);
             var routes = await dbContext.Routes.ToListAsync();
             var aircrafts = await dbContext.Aircrafts.Include(a => a.SeatConfigurations).ToListAsync();
 
@@ -322,11 +397,15 @@ public static class DatabaseSeeder
                     var arr = dep.AddMinutes(route.EstimatedDurationMinutes);
                     // Suffix ngày để tránh duplicate FlightNumber
                     var flightNum = $"{num}-{baseDate:MMdd}";
+
+                    dbSchedules.TryGetValue(num, out var scheduleId);
+
                     flightList.Add(new FlightBooking.Domain.Entities.Flights.Flight
                     {
                         FlightNumber = flightNum,
                         RouteId     = route.Id,
                         AircraftId  = ac.Id,
+                        ScheduleId  = scheduleId > 0 ? scheduleId : (int?)null,
                         DepartureTime = dep,
                         ArrivalTime   = arr,
                         BasePrice = price,
@@ -469,6 +548,8 @@ public static class DatabaseSeeder
             .Include(a => a.SeatConfigurations)
             .ToListAsync();
 
+        var dbSchedules2 = await dbContext.FlightSchedules.ToDictionaryAsync(s => s.FlightNumber, s => s.Id);
+
         var supplementalFlights = new[]
         {
             (Prefix: "BN701", Airline: "BN", Origin: "SGN", Destination: "DAD", Hour: 17, Price: 980_000m, Stops: 0, StopoverCodes: (string?)null),
@@ -502,11 +583,14 @@ public static class DatabaseSeeder
                     continue;
 
                 var departure = baseDate.AddHours(seed.Hour);
+                dbSchedules2.TryGetValue(seed.Prefix, out var scheduleId);
+
                 newFlights.Add(new FlightBooking.Domain.Entities.Flights.Flight
                 {
                     FlightNumber = flightNumber,
                     RouteId = route.Id,
                     AircraftId = aircraft.Id,
+                    ScheduleId = scheduleId > 0 ? scheduleId : (int?)null,
                     DepartureTime = departure,
                     ArrivalTime = departure.AddMinutes(route.EstimatedDurationMinutes + seed.Stops * 55),
                     BasePrice = seed.Price,
@@ -539,6 +623,82 @@ public static class DatabaseSeeder
                 }
             }
             dbContext.FlightSeats.AddRange(supplementalSeats);
+            await dbContext.SaveChangesAsync();
+        }
+
+        // 14. Seed AirportStaff accounts
+        var staffSeeds = new[]
+        {
+            (Email: "staff.sgn@airport.vn", Name: "Staff Tân Sơn Nhất", Airport: "SGN"),
+            (Email: "staff.han@airport.vn", Name: "Staff Nội Bài", Airport: "HAN")
+        };
+        var staffPassword = "Password123!";
+
+        foreach (var (email, name, airport) in staffSeeds)
+        {
+            if (await userManager.FindByEmailAsync(email) == null)
+            {
+                var staff = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    FullName = name,
+                    Role = FlightBooking.Domain.Enums.UserRole.AirportStaff,
+                    EmailConfirmed = true,
+                    AirportCode = airport
+                };
+                var result = await userManager.CreateAsync(staff, staffPassword);
+                if (result.Succeeded)
+                    await userManager.AddToRoleAsync(staff, "AirportStaff");
+            }
+        }
+
+        // 15. Seed Promotions nếu trống
+        if (!await dbContext.Promotions.AnyAsync())
+        {
+            var dbAirlines = await dbContext.Airlines.ToListAsync();
+            var idVN = dbAirlines.FirstOrDefault(a => a.Code == "VN")?.Id;
+            var idVJ = dbAirlines.FirstOrDefault(a => a.Code == "VJ")?.Id;
+            var idBL = dbAirlines.FirstOrDefault(a => a.Code == "BL")?.Id;
+
+            dbContext.Promotions.AddRange(
+                new FlightBooking.Domain.Entities.Promotions.Promotion
+                {
+                    Code = "VN30HE2026",
+                    Name = "Hè rực rỡ - Giảm 30%",
+                    DiscountPercent = 30,
+                    StartDate = DateTime.Today.AddDays(-10),
+                    EndDate = DateTime.Today.AddDays(90),
+                    Status = "Active",
+                    AirlineId = idVN,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                },
+                new FlightBooking.Domain.Entities.Promotions.Promotion
+                {
+                    Code = "VJ50SUMMER",
+                    Name = "Chào hè cực chất - Giảm 50%",
+                    DiscountPercent = 50,
+                    StartDate = DateTime.Today.AddDays(-5),
+                    EndDate = DateTime.Today.AddDays(60),
+                    Status = "Active",
+                    AirlineId = idVJ,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                },
+                new FlightBooking.Domain.Entities.Promotions.Promotion
+                {
+                    Code = "BAMBOO20",
+                    Name = "Bay xanh cùng Bamboo - Giảm 20%",
+                    DiscountPercent = 20,
+                    StartDate = DateTime.Today.AddDays(-2),
+                    EndDate = DateTime.Today.AddDays(45),
+                    Status = "Active",
+                    AirlineId = idBL,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                }
+            );
             await dbContext.SaveChangesAsync();
         }
     }

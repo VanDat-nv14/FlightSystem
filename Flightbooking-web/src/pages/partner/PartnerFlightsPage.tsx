@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit2, Trash2, Search, X, Check, Plane, Calendar, ArrowRight } from "lucide-react"
+import { Plus, Edit2, Trash2, Search, X, Check, Plane, Calendar, ArrowRight, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,7 +14,26 @@ import { aircraftService } from "../../services/aircraft.service"
 import { useAuthStore } from "../../stores/useAuthStore"
 import { PaginationControl } from "@/components/ui/pagination-control"
 
-const FLIGHT_STATUSES = ["Scheduled", "Boarding", "Departed", "Arrived", "Delayed", "Cancelled"]
+const STATUS_DETAILS: Record<string, { label: string; desc: string; color: string }> = {
+  Scheduled: { label: "Lịch trình", desc: "Đang chờ đến giờ khởi hành", color: "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-50" },
+  Boarding: { label: "Lên máy bay", desc: "Đang đón khách lên tàu bay", color: "text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-50" },
+  Delayed: { label: "Hoãn chuyến", desc: "Chuyến bay đang bị trì hoãn", color: "text-orange-700 bg-orange-50 border-orange-200 hover:bg-orange-50" },
+  Completed: { label: "Đã hạ cánh", desc: "Đã hoàn thành chặng bay an toàn", color: "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-50" },
+  Cancelled: { label: "Đã hủy", desc: "Chặng bay này đã bị hủy bỏ", color: "text-red-700 bg-red-50 border-red-200 hover:bg-red-50" }
+}
+
+const getNextStatuses = (current: string) => {
+  switch (current) {
+    case "Scheduled":
+      return ["Boarding", "Delayed", "Cancelled"];
+    case "Boarding":
+      return ["Completed", "Delayed", "Cancelled"];
+    case "Delayed":
+      return ["Scheduled", "Boarding", "Cancelled"];
+    default:
+      return []; // Completed hoặc Cancelled là các trạng thái kết thúc, không thể thay đổi
+  }
+}
 
 interface FlightModalProps {
   mode: "create" | "edit"
@@ -56,6 +75,8 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
     }
   }
 
+  const currentStatusInfo = STATUS_DETAILS[flight?.status ?? "Scheduled"]
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <motion.div
@@ -68,7 +89,9 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
           <h2 className="text-xl font-bold">{mode === "create" ? "Thêm chuyến bay mới" : "Chỉnh sửa chuyến bay"}</h2>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="w-4 h-4" /></Button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* Section 1: Flight & Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Số hiệu chuyến bay</Label>
@@ -81,21 +104,71 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
                 className="uppercase font-bold"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Trạng thái</Label>
-              <Select value={status} onValueChange={setStatus} disabled={mode === "create"}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FLIGHT_STATUSES.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            
+            {mode === "create" && (
+              <div className="space-y-2">
+                <Label>Trạng thái khởi tạo</Label>
+                <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-sm font-semibold text-blue-700">Lịch trình (Mặc định)</span>
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Section 1.1: Operational Status flow for edit mode */}
+          {mode === "edit" && (
+            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <Label className="text-slate-700 font-bold text-sm">Vận hành trạng thái chuyến bay</Label>
+              
+              {/* Current Status banner */}
+              <div className="flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái hiện tại</p>
+                  <p className="text-sm font-bold text-slate-800 mt-0.5">{currentStatusInfo?.label}</p>
+                  <p className="text-xs text-slate-500">{currentStatusInfo?.desc}</p>
+                </div>
+                <Badge className={`border shadow-sm px-2.5 py-0.5 text-xs font-semibold ${currentStatusInfo?.color}`}>
+                  {currentStatusInfo?.label}
+                </Badge>
+              </div>
+
+              {/* Transition flow */}
+              {getNextStatuses(flight?.status ?? "Scheduled").length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Chọn cập nhật trạng thái tiếp theo:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {getNextStatuses(flight?.status ?? "Scheduled").map(nextStatus => {
+                      const isSelected = status === nextStatus
+                      const details = STATUS_DETAILS[nextStatus]
+                      return (
+                        <button
+                          key={nextStatus}
+                          type="button"
+                          onClick={() => setStatus(nextStatus)}
+                          className={`flex flex-col text-left p-3 rounded-lg border transition-all ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/20 shadow-sm'
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="text-xs font-bold text-slate-800">{details.label}</span>
+                          <span className="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-tight">{details.desc}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-lg flex items-center gap-2 text-amber-800">
+                  <Info className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span className="text-xs font-semibold">Chuyến bay đã ở trạng thái kết thúc ({currentStatusInfo?.label}) và không thể cập nhật thêm.</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Section 2: Journey details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Tuyến bay</Label>
@@ -111,7 +184,7 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
                   </SelectContent>
                 </Select>
               ) : (
-                <Input value={`${flight?.originCode} → ${flight?.destinationCode}`} disabled className="bg-muted/50" />
+                <Input value={`${flight?.originCode} → ${flight?.destinationCode}`} disabled className="bg-muted/50 font-medium" />
               )}
             </div>
             <div className="space-y-2">
@@ -132,11 +205,12 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
                   </SelectContent>
                 </Select>
               ) : (
-                <Input value={flight?.aircraftModel} disabled className="bg-muted/50" />
+                <Input value={flight?.aircraftModel} disabled className="bg-muted/50 font-medium" />
               )}
             </div>
           </div>
 
+          {/* Section 3: Schedule timings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Thời gian khởi hành</Label>
@@ -148,18 +222,20 @@ function FlightModal({ mode, flight, onClose, onSave, isSaving, routes, aircraft
             </div>
           </div>
 
+          {/* Section 4: Pricing */}
           <div className="space-y-2">
             <Label>Giá vé cơ bản (VND)</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₫</span>
-              <Input value={basePrice} onChange={e => setBasePrice(e.target.value)} required type="number" placeholder="VD: 1200000" className="pl-7" />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-semibold">₫</span>
+              <Input value={basePrice} onChange={e => setBasePrice(e.target.value)} required type="number" placeholder="VD: 1200000" className="pl-7 font-bold text-slate-800" />
             </div>
           </div>
 
+          {/* Footer Actions */}
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Hủy</Button>
-            <Button type="submit" className="flex-1 gap-2" disabled={isSaving}>
-              {isSaving ? "Đang lưu..." : <><Check className="w-4 h-4" /> Lưu</>}
+            <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Hủy</Button>
+            <Button type="submit" className="flex-1 gap-2 rounded-xl bg-blue-600 hover:bg-blue-700" disabled={isSaving}>
+              {isSaving ? "Đang lưu..." : <><Check className="w-4 h-4" /> Lưu chuyến bay</>}
             </Button>
           </div>
         </form>
@@ -231,13 +307,20 @@ export default function PartnerFlightsPage() {
     }
   }
 
-  function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  const renderStatusBadge = (status: string) => {
     switch (status) {
-      case "Scheduled": return "secondary";
-      case "Boarding": return "default";
-      case "Delayed": return "destructive";
-      case "Cancelled": return "destructive";
-      default: return "outline";
+      case "Scheduled":
+        return <Badge className="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-50">Lịch trình</Badge>
+      case "Boarding":
+        return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50 animate-pulse">Lên máy bay</Badge>
+      case "Delayed":
+        return <Badge className="bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-50">Hoãn chuyến</Badge>
+      case "Completed":
+        return <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50">Đã hạ cánh</Badge>
+      case "Cancelled":
+        return <Badge className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-50">Đã hủy</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
     }
   }
 
@@ -253,7 +336,7 @@ export default function PartnerFlightsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Quản lý chuyến bay</h2>
-        <Button className="gap-2" onClick={() => setModalMode("create")}>
+        <Button className="gap-2 bg-blue-600 hover:bg-blue-700 rounded-xl" onClick={() => setModalMode("create")}>
           <Plus className="w-4 h-4" /> Thêm chuyến bay
         </Button>
       </div>
@@ -261,86 +344,84 @@ export default function PartnerFlightsPage() {
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Tìm kiếm mã, tuyến bay..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+          <Input className="pl-9 rounded-xl shadow-sm border-slate-200" placeholder="Tìm kiếm mã, tuyến bay..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
-        <Badge variant="outline" className="text-sm">{filtered.length} chuyến bay</Badge>
+        <Badge variant="outline" className="text-sm bg-white shadow-sm font-medium">{filtered.length} chuyến bay</Badge>
       </div>
 
-      <div className="bg-card text-card-foreground rounded-xl shadow-sm border overflow-hidden relative min-h-[300px]">
+      <div className="bg-card text-card-foreground rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden relative min-h-[300px]">
         {isFlightsLoading && (
           <div className="absolute inset-0 z-10 bg-background/50 flex items-center justify-center backdrop-blur-sm">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         )}
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-slate-50/80 border-b border-slate-200">
             <TableRow>
-              <TableHead>Số hiệu</TableHead>
-              <TableHead>Tuyến bay</TableHead>
-              <TableHead>Máy bay</TableHead>
-              <TableHead>Thời gian</TableHead>
-              <TableHead>Giá cơ bản</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="text-right">Hành động</TableHead>
+              <TableHead className="font-bold text-slate-600">Số hiệu</TableHead>
+              <TableHead className="font-bold text-slate-600">Tuyến bay</TableHead>
+              <TableHead className="font-bold text-slate-600">Máy bay</TableHead>
+              <TableHead className="font-bold text-slate-600">Thời gian</TableHead>
+              <TableHead className="font-bold text-slate-600">Giá cơ bản</TableHead>
+              <TableHead className="font-bold text-slate-600">Trạng thái</TableHead>
+              <TableHead className="text-right font-bold text-slate-600">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && !isFlightsLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
-                  Không có chuyến bay nào.
+                <TableCell colSpan={7} className="text-center h-32 text-muted-foreground font-medium">
+                  Không có chuyến bay nào được tìm thấy.
                 </TableCell>
               </TableRow>
             ) : (
               paginatedFlights.map(flight => (
-                <TableRow key={flight.id}>
-                  <TableCell className="font-bold text-primary">{flight.flightNumber}</TableCell>
+                <TableRow key={flight.id} className="hover:bg-slate-50/50 transition-colors">
+                  <TableCell className="font-extrabold text-blue-600 tracking-wide">{flight.flightNumber}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      {flight.originCode} <ArrowRight className="w-3 h-3 text-muted-foreground" /> {flight.destinationCode}
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                      {flight.originCode} <ArrowRight className="w-3.5 h-3.5 text-slate-400" /> {flight.destinationCode}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">
-                    <div className="flex items-center gap-1">
-                      <Plane className="w-3 h-3 text-muted-foreground" />
+                  <TableCell className="text-sm font-semibold text-slate-700">
+                    <div className="flex items-center gap-1.5">
+                      <Plane className="w-3.5 h-3.5 text-slate-400" />
                       {flight.aircraftModel}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="w-3 h-3" />
+                    <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
                       {new Date(flight.departureTime).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-extrabold text-slate-800">
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(flight.basePrice)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(flight.status)}>
-                      {{ Scheduled: 'Lịch trình', Delayed: 'Hoãn', Boarding: 'Lên máy bay', InAir: 'Đang bay', Landed: 'Đã hạ cánh', Cancelled: 'Đã hủy' }[flight.status] || flight.status}
-                    </Badge>
+                    {renderStatusBadge(flight.status)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
                       <Button
-                        variant="outline" size="icon"
+                        variant="outline" size="icon" className="rounded-lg h-8 w-8 hover:bg-blue-50 hover:text-blue-600 transition-colors border-slate-200"
                         onClick={() => { setEditingFlight(flight); setModalMode("edit") }}
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5" />
                       </Button>
                       {deleteConfirmId === flight.id ? (
                         <div className="flex gap-1">
-                          <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(flight.id)}>
+                          <Button variant="destructive" size="sm" className="rounded-lg h-8 text-xs" onClick={() => deleteMutation.mutate(flight.id)}>
                             Xóa
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmId(null)}>Hủy</Button>
+                          <Button variant="ghost" size="sm" className="rounded-lg h-8 text-xs hover:bg-slate-100" onClick={() => setDeleteConfirmId(null)}>Hủy</Button>
                         </div>
                       ) : (
                         <Button
-                          variant="destructive" size="icon"
+                          variant="destructive" size="icon" className="rounded-lg h-8 w-8 hover:bg-red-50 hover:text-red-600 transition-colors border-slate-200"
                           onClick={() => setDeleteConfirmId(flight.id)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       )}
                     </div>
@@ -353,9 +434,9 @@ export default function PartnerFlightsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-lg border shadow-sm">
-          <div className="text-sm text-muted-foreground">
-            Hiển thị <span className="font-medium text-foreground">{paginatedFlights.length}</span> trên tổng số <span className="font-medium text-foreground">{filtered.length}</span> chuyến bay
+        <div className="flex justify-between items-center mt-4 bg-card p-3 rounded-xl border shadow-sm">
+          <div className="text-sm text-slate-500 font-medium">
+            Hiển thị <span className="font-semibold text-slate-800">{paginatedFlights.length}</span> trên tổng số <span className="font-semibold text-slate-800">{filtered.length}</span> chuyến bay
           </div>
           <PaginationControl currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>

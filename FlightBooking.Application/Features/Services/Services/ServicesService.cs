@@ -1,18 +1,18 @@
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Application.Features.Services.DTOs;
 using FlightBooking.Application.Features.Services.Interfaces;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Services.Services
 {
     public class ServicesService : IServicesService
     {
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public ServicesService(FlightBookingDbContext context)
+        public ServicesService(IApplicationDbContext context)
         {
             _context = context;
         }

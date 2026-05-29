@@ -1,16 +1,16 @@
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Application.Features.Customer.DTOs;
 using FlightBooking.Application.Features.Customer.Interfaces;
 using FlightBooking.Application.Common.Exceptions;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Customer.Services
 {
     public class CustomerNotificationService : ICustomerNotificationService
     {
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public CustomerNotificationService(FlightBookingDbContext context)
+        public CustomerNotificationService(IApplicationDbContext context)
         {
             _context = context;
         }
