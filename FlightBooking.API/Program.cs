@@ -3,7 +3,15 @@ using FlightBooking.Application.Features.Account.Interfaces;
 using FlightBooking.Application.Features.Auth.Interfaces;
 using FlightBooking.Application.Features.Customer.Interfaces;
 using FlightBooking.Application.Features.Flights.Interfaces;
+using FlightBooking.Application.Features.Email.Interfaces;
 using FlightBooking.Infrastructure.Services;
+using FlightBooking.Application.Features.Flights.Services;
+using FlightBooking.Application.Features.Account.Services;
+using FlightBooking.Application.Features.Customer.Services;
+using FlightBooking.Application.Features.Services.Services;
+using FlightBooking.Application.Features.Promotions.Interfaces;
+using FlightBooking.Application.Features.Promotions.Services;
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Infrastructure.Persistence;
 using FlightBooking.Infrastructure.Persistence.Seed;
@@ -66,6 +74,9 @@ builder.Services.AddSwaggerGen(c =>
 // ── 3. Database ───────────────────────────────────────────────────────────
 builder.Services.AddDbContext<FlightBookingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IApplicationDbContext>(provider =>
+    provider.GetRequiredService<FlightBookingDbContext>());
 
 // ── 4. ASP.NET Identity (PHẢI đặt SAU DbContext, TRƯỚC JWT) ─────────────
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -131,6 +142,7 @@ builder.Services.AddHangfire(configuration => configuration
     .UseSqlServerStorage(connectionString));
 
 builder.Services.AddHangfireServer();
+builder.Services.AddSingleton<IJobScheduler, HangfireJobScheduler>();
 
 // ── 7. Application Services ───────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -140,13 +152,17 @@ builder.Services.AddScoped<IAirlineService, AirlineService>();
 builder.Services.AddScoped<IAircraftService, AircraftService>();
 builder.Services.AddScoped<IRouteService, RouteService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
+builder.Services.AddScoped<IFlightScheduleService, FlightScheduleService>();
 builder.Services.AddScoped<ISeatConfigurationService, SeatConfigurationService>();
 builder.Services.AddScoped<IPartnerBookingService, PartnerBookingService>();
 builder.Services.AddScoped<IAdminBookingService, AdminBookingService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ICancellationService, CancellationService>();
 builder.Services.AddScoped<IPartnerDashboardService, PartnerDashboardService>();
 builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
 builder.Services.AddScoped<ICustomerFavoriteService, CustomerFavoriteService>();
+builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<FlightBooking.Application.Features.Services.Interfaces.IServicesService, ServicesService>();
 
 // ── 8. CORS ───────────────────────────────────────────────────────────────
@@ -195,7 +211,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// HTTPS Redirect chỉ bật ở Production - tắt ở Development để tránh lỗi CORS preflight
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCookiePolicy();
 
 app.UseCors("AllowFrontend");
@@ -206,6 +226,27 @@ app.UseAuthentication();   // ← PHẢI trước UseAuthorization
 app.UseAuthorization();
 
 app.UseHangfireDashboard("/hangfire");
+
+// Configure Hangfire Recurring Jobs
+RecurringJob.AddOrUpdate<IFlightScheduleService>(
+    "ensure-next-30-days",
+    x => x.EnsureNext30DaysAsync(),
+    "1 0 * * *"); // 00:01 daily
+
+RecurringJob.AddOrUpdate<IFlightService>(
+    "auto-complete-arrived-flights",
+    x => x.AutoCompleteArrivedFlightsAsync(),
+    "*/5 * * * *"); // every 5 minutes
+
+RecurringJob.AddOrUpdate<ICancellationService>(
+    "remind-expiring-deposits",
+    x => x.SendDepositRemindersAsync(),
+    "0 * * * *"); // every hour
+
+RecurringJob.AddOrUpdate<ICancellationService>(
+    "auto-cancel-expired-deposits",
+    x => x.AutoCancelExpiredDepositsAsync(),
+    "*/30 * * * *"); // every 30 minutes
 
 app.MapControllers();
 

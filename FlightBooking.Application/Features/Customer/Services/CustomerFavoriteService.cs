@@ -1,19 +1,19 @@
 using FlightBooking.Application.Common.Exceptions;
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Application.Features.Customer.DTOs;
 using FlightBooking.Application.Features.Customer.Interfaces;
 using FlightBooking.Domain.Entities.Users;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Customer.Services
 {
     public class CustomerFavoriteService : ICustomerFavoriteService
     {
         private const string AirportType = "Airport";
         private const string FlightType = "Flight";
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public CustomerFavoriteService(FlightBookingDbContext context)
+        public CustomerFavoriteService(IApplicationDbContext context)
         {
             _context = context;
         }

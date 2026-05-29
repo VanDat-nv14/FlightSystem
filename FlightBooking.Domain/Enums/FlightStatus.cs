@@ -6,5 +6,6 @@ public enum FlightStatus
     Delayed = 1,    // Trễ
     Cancelled = 2,  // Hủy
     Completed = 3,  // Hoàn thành
-    Boarding = 4    // Đang lên máy bay
+    Boarding = 4,   // Đang lên máy bay
+    InFlight = 5    // Đang bay (sau khi cất cánh)
 }

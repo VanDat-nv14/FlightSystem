@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom"
-import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut, Settings, Building2 } from "lucide-react"
+import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut, Settings, Building2, Calendar } from "lucide-react"
 import { useAuthStore } from "../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, to: "/partner" },
   { name: "Chuyến bay", icon: Plane, to: "/partner/flights" },
+  { name: "Lịch bay định kỳ", icon: Calendar, to: "/partner/schedules" },
   { name: "Máy bay", icon: Plane, to: "/partner/aircrafts" },
   { name: "Tuyến bay", icon: Ticket, to: "/partner/routes" },
   { name: "Giá & Hạng vé", icon: Ticket, to: "/partner/fares" },
@@ -35,7 +36,7 @@ export default function PartnerLayout() {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-64 border-r bg-muted/20 flex flex-col hidden md:flex">
+      <aside className="w-64 border-r bg-muted/20 flex flex-col hidden md:flex h-screen sticky top-0">
         <div className="h-16 border-b flex items-center px-6 font-bold text-lg gap-2 text-primary">
           <Building2 className="w-5 h-5" />
           Airline Manager

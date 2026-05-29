@@ -5,5 +5,6 @@ public enum UserRole
     Customer = 0,   // Khách hàng
     Admin = 1,      // Quản trị viên
     Employee = 2,   // Nhân viên
-    AirlineManager = 3 // Quản lý hãng bay
+    AirlineManager = 3, // Quản lý hãng bay
+    AirportStaff = 4   // Nhân viên sân bay
 }

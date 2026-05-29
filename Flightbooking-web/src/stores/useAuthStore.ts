@@ -8,6 +8,7 @@ export interface User {
   role: string;
   urlAvatar?: string | null;
   airlineId?: number;
+  airportCode?: string;
 }
 
 interface AuthState {

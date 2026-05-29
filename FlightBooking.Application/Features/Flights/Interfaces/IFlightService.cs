@@ -19,5 +19,8 @@ namespace FlightBooking.Application.Features.Flights.Interfaces
             Task<List<FlightSeatDto>> GetSeatsByFlightIdAsync(int flightId);
             Task<bool> HoldSeatsAsync(int flightId, List<string> seatNumbers);
             Task ReleaseHeldSeatsAsync(int flightId, List<string> seatNumbers);
+            Task<bool> UpdateStatusAsync(int id, string newStatus, string? airportCode, string userRole, int? currentAirlineId = null, string? delayReason = null);
+            Task<List<FlightDto>> GetByAirportAsync(string airportCode);
+            Task<int> AutoCompleteArrivedFlightsAsync();
     }
 }

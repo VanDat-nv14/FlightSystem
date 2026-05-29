@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom"
-import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut, Building2 } from "lucide-react"
+import { Plane, LayoutDashboard, Ticket, Users, FileText, LogOut, Building2, Calendar } from "lucide-react"
 import { useAuthStore } from "../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -8,6 +8,7 @@ const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, to: "/admin" },
   { name: "Hãng bay", icon: Building2, to: "/admin/airlines" },
   { name: "Chuyến bay", icon: Plane, to: "/admin/flights" },
+  { name: "Lịch bay", icon: Calendar, to: "/admin/schedules" },
   { name: "Tuyến bay", icon: Ticket, to: "/admin/routes" },
   { name: "Sân bay", icon: Plane, to: "/admin/airports" },
   { name: "Máy bay", icon: Plane, to: "/admin/aircrafts" },
@@ -34,12 +35,12 @@ export default function AdminLayout() {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-64 border-r bg-muted/20 flex flex-col hidden md:flex">
+      <aside className="w-64 border-r bg-muted/20 flex flex-col hidden md:flex h-screen sticky top-0">
         <div className="h-16 border-b flex items-center px-6 font-bold text-lg gap-2">
           <Plane className="w-5 h-5 text-primary" />
           Admin Portal
         </div>
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

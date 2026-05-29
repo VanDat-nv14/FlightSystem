@@ -1,20 +1,20 @@
+using FlightBooking.Application.Common.Interfaces;
 using FlightBooking.Application.Features.Flights.DTOs;
 using FlightBooking.Application.Features.Flights.Interfaces;
 using FlightBooking.Domain.Enums;
-using FlightBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FlightBooking.Infrastructure.Services
+namespace FlightBooking.Application.Features.Flights.Services
 {
     public class PartnerDashboardService : IPartnerDashboardService
     {
-        private readonly FlightBookingDbContext _context;
+        private readonly IApplicationDbContext _context;
 
-        public PartnerDashboardService(FlightBookingDbContext context)
+        public PartnerDashboardService(IApplicationDbContext context)
         {
             _context = context;
         }

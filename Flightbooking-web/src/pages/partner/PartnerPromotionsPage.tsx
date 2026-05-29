@@ -6,69 +6,76 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAuthStore } from "../../stores/useAuthStore";
 import { PaginationControl } from "@/components/ui/pagination-control";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { promotionService, type CreatePromotionRequest, type UpdatePromotionRequest, type PromotionDto } from "../../services/promotion.service";
 
 type PromotionStatus = "Active" | "Paused" | "Expired";
 
-interface Promotion {
-  id: string;
-  code: string;
-  name: string;
-  discountPercent: number;
-  startDate: string;
-  endDate: string;
-  status: PromotionStatus;
-}
-
-const STATUS_LABEL: Record<PromotionStatus, string> = {
+const STATUS_LABEL: Record<string, string> = {
   Active: "Đang chạy",
   Paused: "Tạm dừng",
   Expired: "Hết hạn",
+  Upcoming: "Sắp diễn ra",
 };
 
-function storageKey(airlineId?: number) {
-  return `partner-promotions-${airlineId ?? "none"}`;
-}
-
-function loadPromotions(airlineId?: number): Promotion[] {
-  try {
-    return JSON.parse(localStorage.getItem(storageKey(airlineId)) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function savePromotions(airlineId: number | undefined, data: Promotion[]) {
-  localStorage.setItem(storageKey(airlineId), JSON.stringify(data));
-}
-
 export default function PartnerPromotionsPage() {
-  const { user } = useAuthStore();
-  const [promotions, setPromotions] = useState<Promotion[]>(() => loadPromotions(user?.airlineId));
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [discountPercent, setDiscountPercent] = useState("10");
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [status, setStatus] = useState<PromotionStatus>("Active");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const filtered = useMemo(() => promotions.filter((p) =>
-    p.code.toLowerCase().includes(search.toLowerCase()) ||
-    p.name.toLowerCase().includes(search.toLowerCase())
-  ), [promotions, search]);
+  const { data: promotions = [], isLoading } = useQuery({
+    queryKey: ["partner-promotions"],
+    queryFn: promotionService.getMine,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreatePromotionRequest) => promotionService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partner-promotions"] });
+      resetForm();
+      setErrorMsg("");
+    },
+    onError: (err: any) => {
+      setErrorMsg(err?.response?.data?.message || "Có lỗi xảy ra khi tạo khuyến mãi.");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdatePromotionRequest }) =>
+      promotionService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partner-promotions"] });
+      resetForm();
+      setErrorMsg("");
+    },
+    onError: (err: any) => {
+      setErrorMsg(err?.response?.data?.message || "Có lỗi xảy ra khi cập nhật.");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => promotionService.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partner-promotions"] }),
+  });
+
+  const filtered = useMemo(() =>
+    promotions.filter((p) =>
+      p.code.toLowerCase().includes(search.toLowerCase()) ||
+      p.name.toLowerCase().includes(search.toLowerCase())
+    ), [promotions, search]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedPromotions = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  function persist(next: Promotion[]) {
-    setPromotions(next);
-    savePromotions(user?.airlineId, next);
-  }
 
   function resetForm() {
     setEditingId(null);
@@ -80,20 +87,21 @@ export default function PartnerPromotionsPage() {
     setStatus("Active");
   }
 
-  function editPromotion(item: Promotion) {
+  function editPromotion(item: PromotionDto) {
     setEditingId(item.id);
     setCode(item.code);
     setName(item.name);
     setDiscountPercent(item.discountPercent.toString());
     setStartDate(item.startDate);
     setEndDate(item.endDate);
-    setStatus(item.status);
+    setStatus((item.status === "Expired" || item.status === "Upcoming" ? "Active" : item.status) as PromotionStatus);
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const payload: Promotion = {
-      id: editingId ?? crypto.randomUUID(),
+    setErrorMsg("");
+
+    const payload = {
       code: code.trim().toUpperCase(),
       name: name.trim(),
       discountPercent: Math.max(1, Math.min(100, Number(discountPercent) || 1)),
@@ -102,30 +110,34 @@ export default function PartnerPromotionsPage() {
       status,
     };
 
-    const next = editingId
-      ? promotions.map((item) => item.id === editingId ? payload : item)
-      : [payload, ...promotions];
-
-    persist(next);
-    resetForm();
+    if (editingId !== null) {
+      updateMutation.mutate({ id: editingId, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   }
 
-  function remove(id: string) {
-    persist(promotions.filter((item) => item.id !== id));
-  }
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Khuyến mãi</h2>
-        <p className="text-muted-foreground text-sm mt-1">Tạo và quản lý mã ưu đãi nội bộ cho hãng bay.</p>
+        <p className="text-muted-foreground text-sm mt-1">Tạo và quản lý mã ưu đãi cho hãng bay của bạn.</p>
       </div>
 
       <form onSubmit={submit} className="rounded-lg border bg-card p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <div className="space-y-2 xl:col-span-1">
             <Label>Mã</Label>
-            <Input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="SKY10" className="uppercase" />
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              placeholder="SKY10"
+              className="uppercase"
+              disabled={editingId !== null} // Không cho đổi mã khi đang edit
+            />
           </div>
           <div className="space-y-2 xl:col-span-2">
             <Label>Tên chương trình</Label>
@@ -142,14 +154,13 @@ export default function PartnerPromotionsPage() {
               <SelectContent>
                 <SelectItem value="Active">Đang chạy</SelectItem>
                 <SelectItem value="Paused">Tạm dừng</SelectItem>
-                <SelectItem value="Expired">Hết hạn</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-end gap-2">
-            <Button type="submit" className="flex-1 gap-2">
+            <Button type="submit" className="flex-1 gap-2" disabled={isPending}>
               {editingId ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {editingId ? "Lưu" : "Thêm"}
+              {isPending ? "Đang lưu..." : editingId ? "Lưu" : "Thêm"}
             </Button>
             {editingId && <Button type="button" variant="outline" size="icon" onClick={resetForm}><X className="h-4 w-4" /></Button>}
           </div>
@@ -164,6 +175,9 @@ export default function PartnerPromotionsPage() {
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
           </div>
         </div>
+        {errorMsg && (
+          <p className="mt-3 text-sm text-red-500 font-medium">{errorMsg}</p>
+        )}
       </form>
 
       <div className="flex items-center gap-3">
@@ -187,7 +201,11 @@ export default function PartnerPromotionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Đang tải...</TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Chưa có khuyến mãi nào.</TableCell>
               </TableRow>
@@ -196,12 +214,27 @@ export default function PartnerPromotionsPage() {
                 <TableCell className="font-mono font-bold text-primary">{item.code}</TableCell>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>{item.discountPercent}%</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.startDate} - {item.endDate}</TableCell>
-                <TableCell><Badge variant={item.status === "Active" ? "default" : item.status === "Paused" ? "secondary" : "destructive"}>{STATUS_LABEL[item.status]}</Badge></TableCell>
+                <TableCell className="text-sm text-muted-foreground">{item.startDate} → {item.endDate}</TableCell>
+                <TableCell>
+                  <Badge variant={
+                    item.status === "Active" ? "default" :
+                    item.status === "Paused" ? "secondary" :
+                    item.status === "Upcoming" ? "outline" : "destructive"
+                  }>
+                    {STATUS_LABEL[item.status] ?? item.status}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="icon" onClick={() => editPromotion(item)}><Edit2 className="h-4 w-4" /></Button>
-                    <Button variant="destructive" size="icon" onClick={() => remove(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => deleteMutation.mutate(item.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

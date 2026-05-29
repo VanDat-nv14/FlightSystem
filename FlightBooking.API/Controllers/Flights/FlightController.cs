@@ -60,6 +60,50 @@ namespace FlightBooking.API.Controllers.Flights
         public async Task<IActionResult> Delete(int id)
             => OkResponse(await _flightService.DeleteAsync(id), "Xóa chuyến bay thành công.");
 
+        [HttpPost("{id}/status")]
+        [Authorize(Roles = "Admin,Employee,AirlineManager,AirportStaff")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateFlightStatusRequest request)
+        {
+            try
+            {
+                var userRole = string.Empty;
+                if (User.IsInRole("Admin")) userRole = "Admin";
+                else if (User.IsInRole("Employee")) userRole = "Employee";
+                else if (User.IsInRole("AirlineManager")) userRole = "AirlineManager";
+                else if (User.IsInRole("AirportStaff")) userRole = "AirportStaff";
+
+                string? airportCode = User.FindFirst("airportCode")?.Value;
+                int? airlineId = null;
+
+                if (userRole == "AirlineManager")
+                {
+                    var claim = User.FindFirst("airlineId");
+                    if (claim != null) airlineId = int.Parse(claim.Value);
+                }
+
+                var result = await _flightService.UpdateStatusAsync(id, request.Status, airportCode, userRole, airlineId, request.DelayReason);
+                return OkResponse(result, "Cập nhật trạng thái chuyến bay thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(ex.Message, 400);
+            }
+        }
+
+        [HttpGet("by-airport/{airportCode}")]
+        [Authorize(Roles = "Admin,Employee,AirportStaff")]
+        public async Task<IActionResult> GetByAirport(string airportCode)
+        {
+            try
+            {
+                return OkResponse(await _flightService.GetByAirportAsync(airportCode), "Lấy danh sách chuyến bay theo sân bay thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(ex.Message, 400);
+            }
+        }
+
         [HttpPost("{id}/hold-seats")]
         [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("HoldSeatLimit")]
         public async Task<IActionResult> HoldSeats(int id, [FromBody] List<string> seatNumbers)

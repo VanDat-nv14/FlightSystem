@@ -232,6 +232,11 @@ namespace FlightBooking.Infrastructure.Services
                 claims.Add(new Claim("airlineId", user.AirlineId.Value.ToString()));
             }
 
+            if (!string.IsNullOrEmpty(user.AirportCode))
+            {
+                claims.Add(new Claim("airportCode", user.AirportCode));
+            }
+
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
@@ -252,7 +257,8 @@ namespace FlightBooking.Infrastructure.Services
                     Email = user.Email!,
                     Role = user.Role.ToString(),
                     UrlAvatar = urlAvatar,
-                    AirlineId = user.AirlineId
+                    AirlineId = user.AirlineId,
+                    AirportCode = user.AirportCode
                 }
             });
         }
