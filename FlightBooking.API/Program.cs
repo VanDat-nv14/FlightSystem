@@ -28,6 +28,14 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ── Load cấu hình Docker nếu đang chạy trong container ───────────────────
+if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+{
+    builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: false);
+}
+// Các biến môi trường luôn có độ ưu tiên cao nhất (ghi đè appsettings)
+builder.Configuration.AddEnvironmentVariables();
+
 // ── 1. Lấy thông số JWT từ appsettings.json ──────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var securityKey = new SymmetricSecurityKey(

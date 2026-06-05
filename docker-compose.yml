@@ -1,0 +1,105 @@
+services:
+  # ────────────────────────────────────────────────────
+  # SQL Server
+  # ────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: flightbooking_sqlserver
+    environment:
+      SA_PASSWORD: ${DB_SA_PASSWORD}
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - flightbooking_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$SA_PASSWORD" -Q "SELECT 1" -C -N || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ────────────────────────────────────────────────────
+  # Backend API (.NET 8)
+  # ────────────────────────────────────────────────────
+  api:
+    build:
+      context: . # build từ root FlightBookingSystem/
+      dockerfile: FlightBooking.API/Dockerfile
+    container_name: flightbooking_api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      # Database – ghi đè appsettings.json bằng env var (ASP.NET Core convention)
+      ConnectionStrings__DefaultConnection: >-
+        Server=sqlserver,1433;Database=FlightBookingDB;User Id=sa;Password=${DB_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=True
+
+      # JWT
+      JwtSettings__SecurityKey: ${JWT_SECURITY_KEY}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+
+      # Google OAuth
+      Google__ClientId: ${GOOGLE_CLIENT_ID}
+      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+
+      # SMTP
+      SmtpSettings__Username: ${SMTP_USERNAME}
+      SmtpSettings__Password: ${SMTP_PASSWORD}
+
+      # Seed data
+      SeedData__AdminEmail: ${SEED_ADMIN_EMAIL}
+      SeedData__AdminPassword: ${SEED_ADMIN_PASSWORD}
+      SeedData__ManagerPassword: ${SEED_MANAGER_PASSWORD}
+
+      # Frontend URL (dùng cho redirect Google OAuth)
+      Frontend__BaseUrl: http://localhost:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - flightbooking_net
+    restart: on-failure
+
+  # ────────────────────────────────────────────────────
+  # Frontend (React + Vite dev server)
+  # ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./Flightbooking-web
+      dockerfile: Dockerfile
+    container_name: flightbooking_frontend
+    environment:
+      # Frontend gọi API qua localhost:8080 (từ browser, không qua Docker network)
+      VITE_API_BASE_URL: http://localhost:8080/api
+    ports:
+      - "5173:5173"
+    volumes:
+      # Hot-reload: mount source code vào container
+      - ./Flightbooking-web/src:/app/src
+      - ./Flightbooking-web/public:/app/public
+      - ./Flightbooking-web/index.html:/app/index.html
+    networks:
+      - flightbooking_net
+    depends_on:
+      - api
+
+# ────────────────────────────────────────────────────
+# Volumes & Networks
+# ────────────────────────────────────────────────────
+volumes:
+  sqlserver_data:
+
+networks:
+  flightbooking_net:
+    driver: bridge
