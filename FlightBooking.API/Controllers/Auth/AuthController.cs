@@ -28,6 +28,8 @@ namespace FlightBooking.API.Controllers.Auth
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             var result = await _authService.RegisterAsync(request);
+            SetRefreshTokenCookie(result.RefreshToken);
+            result.RefreshToken = string.Empty;
             return OkResponse(result, "Đăng ký thành công.");
         }
 
@@ -38,10 +40,21 @@ namespace FlightBooking.API.Controllers.Auth
             return OkResponse<object>(null!, "Đăng ký thành công. Vui lòng chờ Admin phê duyệt.");
         }
 
+        [HttpPost("register-flight-manager")]
+        public async Task<IActionResult> RegisterFlightManager([FromBody] FlightManagerRegisterRequest request)
+        {
+            var result = await _authService.RegisterFlightManagerAsync(request);
+            SetRefreshTokenCookie(result.RefreshToken);
+            result.RefreshToken = string.Empty;
+            return OkResponse(result, "Đăng ký tài khoản Quản lý hãng bay thành công.");
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var result = await _authService.LoginAsync(request);
+            SetRefreshTokenCookie(result.RefreshToken);
+            result.RefreshToken = string.Empty;
             return OkResponse(result, "Đăng nhập thành công.");
         }
 
@@ -74,6 +87,8 @@ namespace FlightBooking.API.Controllers.Auth
             try
             {
                 var authResponse = await _authService.LoginWithGoogleAsync(email, name);
+                SetRefreshTokenCookie(authResponse.RefreshToken);
+
                 var userJson = JsonSerializer.Serialize(authResponse.User, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -82,7 +97,7 @@ namespace FlightBooking.API.Controllers.Auth
                 var fragment = string.Join("&", new[]
                 {
                     $"accessToken={Uri.EscapeDataString(authResponse.AccessToken)}",
-                    $"refreshToken={Uri.EscapeDataString(authResponse.RefreshToken)}",
+                    $"refreshToken=",
                     $"expiresAt={Uri.EscapeDataString(authResponse.ExpiresAt.ToString("O"))}",
                     $"user={Uri.EscapeDataString(userJson)}"
                 });
@@ -106,14 +121,46 @@ namespace FlightBooking.API.Controllers.Auth
                 return ErrorResponse("Không xác định được người dùng.", 401);
 
             await _authService.LogoutAsync(userId);
+            Response.Cookies.Delete("refreshToken");
+
             return OkResponse<object>(null!, "Đăng xuất thành công.");
         }
 
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? request)
         {
-            var result = await _authService.RefreshTokenAsync(request);
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken) && request != null)
+            {
+                refreshToken = request.RefreshToken;
+            }
+
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return ErrorResponse("Không tìm thấy Refresh Token.", 400);
+            }
+
+            var result = await _authService.RefreshTokenAsync(new RefreshTokenRequest
+            {
+                RefreshToken = refreshToken
+            });
+
+            SetRefreshTokenCookie(result.RefreshToken);
+            result.RefreshToken = string.Empty;
+
             return OkResponse(result, "Làm mới token thành công.");
+        }
+
+        private void SetRefreshTokenCookie(string token)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+            Response.Cookies.Append("refreshToken", token, cookieOptions);
         }
 
         private string BuildFrontendUrl(string path)

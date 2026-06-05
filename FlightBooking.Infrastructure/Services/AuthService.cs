@@ -109,6 +109,47 @@ namespace FlightBooking.Infrastructure.Services
             }
         }
 
+        public async Task<AuthResponse> RegisterFlightManagerAsync(FlightManagerRegisterRequest request)
+        {
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUser != null)
+                throw new BadRequestException("Email này đã được đăng ký.");
+
+            var existingAirline = await _context.Airlines.FirstOrDefaultAsync(a => a.Id == request.AirlineId);
+            if (existingAirline == null)
+                throw new BadRequestException("Hãng bay được chỉ định không tồn tại.");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var user = new ApplicationUser
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber,
+                    Role = UserRole.AirlineManager,
+                    AirlineId = request.AirlineId,
+                    EmailConfirmed = true
+                };
+
+                var result = await _userManager.CreateAsync(user, request.Password);
+                if (!result.Succeeded)
+                    throw new BadRequestException(string.Join(", ", result.Errors.Select(e => e.Description)));
+
+                await _userManager.AddToRoleAsync(user, "AirlineManager");
+
+                await transaction.CommitAsync();
+
+                return new AuthResponse { AccessToken = string.Empty, RefreshToken = string.Empty, User = null! };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
         {
             var user = await _context.Users
@@ -130,7 +171,7 @@ namespace FlightBooking.Infrastructure.Services
 
             var authResponse = await GenerateAuthResponse(user);
 
-            // Lưu Refresh Token vào DB
+            // Saving the refresh token to the database
             var session = new UserSession
             {
                 UserId = user.Id,
@@ -185,10 +226,36 @@ namespace FlightBooking.Infrastructure.Services
             return authResponse;
         }
 
-        public Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
+        public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
-            // TODO: Implement Refresh Token validation logic (Phase 2)
-            throw new NotImplementedException("Chức năng RefreshToken chưa được triển khai.");
+            var session = await _context.UserSessions
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.RefreshToken == request.RefreshToken && !s.IsRevoked);
+
+            if (session == null || session.User == null || session.ExpiresAt < DateTime.UtcNow)
+            {
+                throw new BadRequestException("Refresh token không hợp lệ hoặc đã hết hạn.");
+            }
+
+            // Thu hồi token cũ (để thực hiện cơ chế xoay vòng Refresh Token nâng cao bảo mật)
+            session.IsRevoked = true;
+            session.RevokedAt = DateTime.UtcNow;
+            session.RevokeReason = "Replaced by new refresh token";
+
+            var authResponse = await GenerateAuthResponse(session.User);
+
+            // Tạo phiên mới cho Refresh Token mới
+            var newSession = new UserSession
+            {
+                UserId = session.UserId,
+                RefreshToken = authResponse.RefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsRevoked = false
+            };
+            _context.UserSessions.Add(newSession);
+            await _context.SaveChangesAsync();
+
+            return authResponse;
         }
 
         public async Task LogoutAsync(int userId)
