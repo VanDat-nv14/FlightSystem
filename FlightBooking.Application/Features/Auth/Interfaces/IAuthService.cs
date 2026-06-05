@@ -11,6 +11,7 @@ namespace FlightBooking.Application.Features.Auth.Interfaces
     {
         Task<AuthResponse> RegisterAsync(RegisterRequest request);
         Task<AuthResponse> RegisterPartnerAsync(PartnerRegisterRequest request);
+        Task<AuthResponse> RegisterFlightManagerAsync(FlightManagerRegisterRequest request);
         Task<AuthResponse> LoginAsync(LoginRequest request);
         Task<AuthResponse> LoginWithGoogleAsync(string email, string fullName);
         Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request);

@@ -56,6 +56,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage', // Lưu vào localStorage với key này
+      // Chỉ lưu trữ user và trạng thái đăng nhập, loại bỏ accessToken và refreshToken để bảo mật
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

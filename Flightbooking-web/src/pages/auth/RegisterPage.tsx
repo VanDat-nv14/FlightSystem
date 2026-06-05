@@ -75,8 +75,8 @@ export default function RegisterPage() {
   return (
     <div className="min-h-[90vh] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-500/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-zinc-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -84,8 +84,9 @@ export default function RegisterPage() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="w-full max-w-5xl bg-background/60 backdrop-blur-2xl rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] overflow-hidden border border-white/20 dark:border-white/10 flex flex-col md:flex-row relative z-10"
       >
-        <div className="relative hidden md:flex w-1/2 flex-col bg-gradient-to-br from-primary/80 to-primary p-12 text-white overflow-hidden order-last">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=2074&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay" />
+        <div className="relative hidden md:flex w-1/2 flex-col p-12 text-white overflow-hidden order-last bg-zinc-950">
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=2074&auto=format&fit=crop')] bg-cover bg-center opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/40" />
           <div className="relative z-20 flex items-center text-2xl font-bold gap-3 tracking-tight">
             <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
               <Plane className="h-6 w-6" />

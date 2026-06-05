@@ -4,6 +4,7 @@ import { API_BASE_URL } from './config';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -35,17 +36,18 @@ apiClient.interceptors.response.use(
       
       try {
         const { refreshToken } = useAuthStore.getState();
-        if (!refreshToken) throw new Error('No refresh token');
         
-        // Cố gắng lấy token mới
+        // Cố gắng lấy token mới (cookie được tự động gửi kèm nhờ withCredentials: true)
         const res = await axios.post(`${API_BASE_URL}/Auth/refresh`, {
-          refreshToken
+          refreshToken: refreshToken || undefined
+        }, {
+          withCredentials: true
         });
         
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = res.data.data;
         
         // Cập nhật store
-        useAuthStore.getState().setTokens(newAccessToken, newRefreshToken);
+        useAuthStore.getState().setTokens(newAccessToken, newRefreshToken || "");
         
         // Gửi lại request ban đầu với token mới
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
