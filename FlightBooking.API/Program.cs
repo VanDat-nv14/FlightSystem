@@ -16,6 +16,7 @@ using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Infrastructure.Persistence;
 using FlightBooking.Infrastructure.Persistence.Seed;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -108,7 +109,9 @@ builder.Services.AddAuthentication(options =>
 .AddCookie(options =>
 {
     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
-    options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
+        : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
 })
 .AddJwtBearer(options =>
 {
@@ -131,6 +134,10 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
     googleOptions.SignInScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme;
     googleOptions.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
+    googleOptions.CorrelationCookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
+        : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+    googleOptions.ClaimActions.MapJsonKey("urn:google:picture", "picture");
 });
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
