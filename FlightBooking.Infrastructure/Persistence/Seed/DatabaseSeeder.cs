@@ -381,8 +381,8 @@ public static class DatabaseSeeder
                 ("QH502", 11, 11, 12, 950_000), // DAD->CXR
             };
 
-            // Tạo chuyến bay cho các ngày: T+1, T+2, T+3, T+5, T+7, T+10, T+14
-            int[] dayOffsets = { 1, 2, 3, 5, 7, 10, 14 };
+            // Chỉ tạo chuyến bay thử nghiệm cho 2 ngày tiếp theo: T+1, T+2
+            int[] dayOffsets = { 1, 2 };
             var flightList = new List<FlightBooking.Domain.Entities.Flights.Flight>();
 
             foreach (int dayOffset in dayOffsets)
@@ -417,25 +417,21 @@ public static class DatabaseSeeder
             dbContext.Flights.AddRange(flightList);
             await dbContext.SaveChangesAsync();
 
-            // Tự động tạo FlightSeats từ SeatConfigurations
-            var allSeats = new List<FlightBooking.Domain.Entities.Seats.FlightSeat>();
-            foreach (var f in flightList)
+            // Tự động tạo FlightSeats từ SeatConfigurations thông qua SQL trực tiếp (tối ưu hóa hiệu năng cực đại)
+            var flightIds = string.Join(",", flightList.Select(f => f.Id));
+            if (!string.IsNullOrEmpty(flightIds))
             {
-                var ac = aircrafts.First(a => a.Id == f.AircraftId);
-                foreach (var sc in ac.SeatConfigurations)
-                {
-                    allSeats.Add(new FlightBooking.Domain.Entities.Seats.FlightSeat
-                    {
-                        FlightId   = f.Id,
-                        SeatNumber = sc.SeatNumber,
-                        ClassType  = sc.ClassType,
-                        Status     = FlightBooking.Domain.Enums.SeatStatus.Available,
-                        Price      = f.BasePrice * sc.PriceMultiplier
-                    });
-                }
+#pragma warning disable EF1002
+                await dbContext.Database.ExecuteSqlRawAsync($@"
+                    INSERT INTO FlightSeats (FlightId, SeatNumber, ClassType, Status, Price, CreatedAt, UpdatedAt)
+                    SELECT f.Id, sc.SeatNumber, sc.ClassType, 0, f.BasePrice * sc.PriceMultiplier, GETUTCDATE(), GETUTCDATE()
+                    FROM Flights f
+                    INNER JOIN Aircrafts a ON f.AircraftId = a.Id
+                    INNER JOIN SeatConfigurations sc ON sc.AircraftId = a.Id
+                    WHERE f.Id IN ({flightIds})
+                ");
+#pragma warning restore EF1002
             }
-            dbContext.FlightSeats.AddRange(allSeats);
-            await dbContext.SaveChangesAsync();
         }
 
         // 11. Seed Aircrafts cho các hãng mới (Pacific, VASCO, Singapore Airlines)
@@ -565,7 +561,7 @@ public static class DatabaseSeeder
             (Prefix: "VJ801", Airline: "VJ", Origin: "SGN", Destination: "DAD", Hour: 5, Price: 1_050_000m, Stops: 2, StopoverCodes: "CXR,HUI"),
         };
 
-        int[] supplementalDayOffsets = { 1, 2, 3, 5, 7, 10, 14 };
+        int[] supplementalDayOffsets = { 1, 2 };
         var newFlights = new List<FlightBooking.Domain.Entities.Flights.Flight>();
         foreach (var dayOffset in supplementalDayOffsets)
         {
@@ -606,24 +602,21 @@ public static class DatabaseSeeder
             dbContext.Flights.AddRange(newFlights);
             await dbContext.SaveChangesAsync();
 
-            var supplementalSeats = new List<FlightBooking.Domain.Entities.Seats.FlightSeat>();
-            foreach (var flight in newFlights)
+            // Tự động tạo FlightSeats cho chuyến bay bổ sung thông qua SQL trực tiếp (tối ưu hóa hiệu năng)
+            var newFlightIds = string.Join(",", newFlights.Select(f => f.Id));
+            if (!string.IsNullOrEmpty(newFlightIds))
             {
-                var aircraft = aircraftLookup.First(a => a.Id == flight.AircraftId);
-                foreach (var seatConfig in aircraft.SeatConfigurations)
-                {
-                    supplementalSeats.Add(new FlightBooking.Domain.Entities.Seats.FlightSeat
-                    {
-                        FlightId = flight.Id,
-                        SeatNumber = seatConfig.SeatNumber,
-                        ClassType = seatConfig.ClassType,
-                        Status = FlightBooking.Domain.Enums.SeatStatus.Available,
-                        Price = flight.BasePrice * seatConfig.PriceMultiplier
-                    });
-                }
+#pragma warning disable EF1002
+                await dbContext.Database.ExecuteSqlRawAsync($@"
+                    INSERT INTO FlightSeats (FlightId, SeatNumber, ClassType, Status, Price, CreatedAt, UpdatedAt)
+                    SELECT f.Id, sc.SeatNumber, sc.ClassType, 0, f.BasePrice * sc.PriceMultiplier, GETUTCDATE(), GETUTCDATE()
+                    FROM Flights f
+                    INNER JOIN Aircrafts a ON f.AircraftId = a.Id
+                    INNER JOIN SeatConfigurations sc ON sc.AircraftId = a.Id
+                    WHERE f.Id IN ({newFlightIds})
+                ");
+#pragma warning restore EF1002
             }
-            dbContext.FlightSeats.AddRange(supplementalSeats);
-            await dbContext.SaveChangesAsync();
         }
 
         // 14. Seed AirportStaff accounts

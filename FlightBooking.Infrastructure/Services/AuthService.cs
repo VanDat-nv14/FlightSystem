@@ -184,7 +184,7 @@ namespace FlightBooking.Infrastructure.Services
             return authResponse;
         }
 
-        public async Task<AuthResponse> LoginWithGoogleAsync(string email, string fullName)
+        public async Task<AuthResponse> LoginWithGoogleAsync(string email, string fullName, string? pictureUrl = null)
         {
             if (string.IsNullOrWhiteSpace(email))
                 throw new BadRequestException("Google account does not provide an email address.");
@@ -209,6 +209,26 @@ namespace FlightBooking.Infrastructure.Services
                     throw new BadRequestException("Không thể tạo tài khoản qua Google.");
 
                 await _userManager.AddToRoleAsync(user, UserRole.Customer.ToString());
+            }
+
+            // Đồng bộ hoặc tạo UserProfile để lưu trữ avatar từ Google
+            if (!string.IsNullOrEmpty(pictureUrl))
+            {
+                var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
+                if (profile == null)
+                {
+                    profile = new FlightBooking.Domain.Entities.Users.UserProfile
+                    {
+                        UserId = user.Id,
+                        UrlAvatar = pictureUrl
+                    };
+                    _context.UserProfiles.Add(profile);
+                }
+                else
+                {
+                    profile.UrlAvatar = pictureUrl;
+                }
+                await _context.SaveChangesAsync();
             }
 
             var authResponse = await GenerateAuthResponse(user);

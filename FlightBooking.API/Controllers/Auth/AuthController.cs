@@ -76,17 +76,28 @@ namespace FlightBooking.API.Controllers.Auth
                 Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
 
             if (!authenticateResult.Succeeded)
+            {
+                System.Console.WriteLine($"[GoogleResponse Error] Authentication failed: {authenticateResult.Failure?.Message}");
+                if (authenticateResult.Failure != null)
+                {
+                    System.Console.WriteLine(authenticateResult.Failure.StackTrace);
+                }
                 return Redirect(BuildFrontendUrl("/login?error=google_failed"));
+            }
 
             var email = authenticateResult.Principal?.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
             var name = authenticateResult.Principal?.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
+            var picture = authenticateResult.Principal?.FindFirstValue("urn:google:picture")
+                          ?? authenticateResult.Principal?.FindFirstValue("picture")
+                          ?? authenticateResult.Principal?.FindFirstValue("image")
+                          ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(email))
                 return Redirect(BuildFrontendUrl("/login?error=google_missing_email"));
 
             try
             {
-                var authResponse = await _authService.LoginWithGoogleAsync(email, name);
+                var authResponse = await _authService.LoginWithGoogleAsync(email, name, picture);
                 SetRefreshTokenCookie(authResponse.RefreshToken);
 
                 var userJson = JsonSerializer.Serialize(authResponse.User, new JsonSerializerOptions
@@ -97,15 +108,17 @@ namespace FlightBooking.API.Controllers.Auth
                 var fragment = string.Join("&", new[]
                 {
                     $"accessToken={Uri.EscapeDataString(authResponse.AccessToken)}",
-                    $"refreshToken=",
+                    $"refreshToken={Uri.EscapeDataString(authResponse.RefreshToken)}",
                     $"expiresAt={Uri.EscapeDataString(authResponse.ExpiresAt.ToString("O"))}",
                     $"user={Uri.EscapeDataString(userJson)}"
                 });
 
                 return Redirect($"{BuildFrontendUrl("/auth/google-callback")}#{fragment}");
             }
-            catch
+            catch (Exception ex)
             {
+                System.Console.WriteLine($"[GoogleResponse Error] Exception: {ex.Message}");
+                System.Console.WriteLine(ex.StackTrace);
                 return Redirect(BuildFrontendUrl("/login?error=google_failed"));
             }
         }

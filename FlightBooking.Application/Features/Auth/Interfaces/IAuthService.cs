@@ -13,7 +13,7 @@ namespace FlightBooking.Application.Features.Auth.Interfaces
         Task<AuthResponse> RegisterPartnerAsync(PartnerRegisterRequest request);
         Task<AuthResponse> RegisterFlightManagerAsync(FlightManagerRegisterRequest request);
         Task<AuthResponse> LoginAsync(LoginRequest request);
-        Task<AuthResponse> LoginWithGoogleAsync(string email, string fullName);
+        Task<AuthResponse> LoginWithGoogleAsync(string email, string fullName, string? pictureUrl = null);
         Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request);
         Task LogoutAsync(int userId);
     }
