@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import {
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { bookingService } from "../../services/booking.service"
-
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type PaymentType   = "full" | "deposit"
@@ -60,6 +59,37 @@ export default function PaymentPage() {
   const [cardForm,      setCardForm]      = useState<CardForm>({ number: "", name: "", expiry: "", cvv: "" })
   const [processing,    setProcessing]    = useState(false)
   const [errors,        setErrors]        = useState<Partial<CardForm>>({})
+
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    const expiresAtStr = sessionStorage.getItem("seatHoldExpiresAt")
+    if (expiresAtStr) {
+      const remaining = Math.max(0, Math.floor((parseInt(expiresAtStr, 10) - Date.now()) / 1000))
+      return remaining
+    }
+    return 10 * 60 // 10 phút mặc định
+  })
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          alert("Thời gian giữ chỗ của bạn đã hết (10 phút). Vui lòng chọn lại chuyến bay.")
+          navigate("/flights")
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [navigate])
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0")
+    const s = (seconds % 60).toString().padStart(2, "0")
+    return `${m}:${s}`
+  }
 
   const grandTotal   = ctx.totalTicket
   const depositAmt   = Math.ceil(grandTotal * DEPOSIT_RATIO)
@@ -137,6 +167,9 @@ export default function PaymentPage() {
       
       // 5. Xóa nháp và chuyển hướng
       sessionStorage.removeItem("draftPassengers")
+      sessionStorage.removeItem("seatHoldExpiresAt")
+      sessionStorage.removeItem("heldSeats")
+
       const confirmedTotal = result.totalAmount ?? grandTotal
       const confirmedDeposit = Math.ceil(confirmedTotal * DEPOSIT_RATIO)
       const confirmedRemaining = confirmedTotal - confirmedDeposit
@@ -155,7 +188,7 @@ export default function PaymentPage() {
     <div className="bg-gray-50 min-h-screen py-8">
       <div className="container px-4 md:px-8 max-w-6xl mx-auto">
         {/* Progress bar */}
-        <div className="flex items-center gap-2 mb-8 text-sm overflow-x-auto">
+        <div className="flex items-center gap-2 mb-6 text-sm overflow-x-auto">
           {["Chọn chuyến", "Chọn ghế", "Thông tin", "Thanh toán"].map((step, i) => (
             <div key={step} className="flex items-center gap-2 shrink-0">
               {i > 0 && <ChevronRight className="w-4 h-4 text-gray-300" />}
@@ -166,6 +199,20 @@ export default function PaymentPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ── Countdown Timer Banner ── */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl mb-6 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Clock className="w-5 h-5 text-amber-600 animate-pulse" />
+            <span>Ghế của bạn đang được giữ trong:</span>
+            <span className="font-mono text-base font-bold text-amber-800 bg-amber-200/70 px-2.5 py-0.5 rounded">
+              {formatTimer(timeLeft)}
+            </span>
+          </div>
+          <span className="text-xs text-amber-700 hidden sm:inline">
+            Vui lòng hoàn tất thanh toán trước khi thời gian giữ chỗ kết thúc.
+          </span>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">

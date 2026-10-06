@@ -1,10 +1,10 @@
+import { useState, useEffect, useMemo } from "react"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { bookingExtrasService } from "../../services/booking-extras.service"
-import { flightService } from "../../services/flight.service"
 import { accountService } from "../../services/account.service"
 import { useAuthStore } from "../../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Stepper } from "@/components/common/Stepper"
-import { Briefcase, Utensils, Shield, Zap, ChevronRight, ChevronLeft, User } from "lucide-react"
+import { Briefcase, Utensils, Shield, Zap, ChevronRight, ChevronLeft, User, Clock } from "lucide-react"
 import { differenceInYears, isAfter } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -42,7 +42,7 @@ const passengerSchema = z.object({
     nationality: z.string().min(1, "Vui lòng chọn quốc tịch"),
     passportNumber: z.string().min(5, "Số hộ chiếu/CCCD không hợp lệ"),
     passportExpiry: z.string().refine((val) => {
-      return isAfter(new Date(val), new Date()); // Simplification: should be after flight date
+      return isAfter(new Date(val), new Date());
     }, "Hộ chiếu phải còn hạn"),
     baggage: z.string(),
     services: z.array(z.string()),
@@ -71,7 +71,44 @@ export default function PassengerInfoPage() {
   const basePriceUrl  = Number(searchParams.get("basePrice")) || 2_500_000
   const totalUrl      = Number(searchParams.get("total"))     || basePriceUrl
   const seatsParam    = searchParams.get("seats")         || ""
-  const passengerCount = Number(searchParams.get("passengerCount")) || 1
+  const passengerCountParam = Number(searchParams.get("passengerCount")) || 1
+
+  const seatNumbers = useMemo(() => {
+    return seatsParam ? seatsParam.split(",").map(s => s.trim()).filter(Boolean) : []
+  }, [seatsParam])
+
+  const actualPassengerCount = seatNumbers.length > 0 ? seatNumbers.length : passengerCountParam
+
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    const expiresAtStr = sessionStorage.getItem("seatHoldExpiresAt")
+    if (expiresAtStr) {
+      const remaining = Math.max(0, Math.floor((parseInt(expiresAtStr, 10) - Date.now()) / 1000))
+      return remaining
+    }
+    return 10 * 60 // 10 phút mặc định
+  })
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          alert("Thời gian giữ chỗ của bạn đã hết (10 phút). Vui lòng chọn lại ghế.")
+          navigate(`/seats?flightId=${flightId}&passengerCount=${actualPassengerCount}&origin=${originCode}&destination=${destCode}&flightNumber=${flightNumber}&basePrice=${basePriceUrl}`)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [flightId, actualPassengerCount, originCode, destCode, flightNumber, basePriceUrl, navigate])
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0")
+    const s = (seconds % 60).toString().padStart(2, "0")
+    return `${m}:${s}`
+  }
 
   const { data: dbBaggage = [] } = useQuery({
     queryKey: ['baggage-allowances'],
@@ -100,33 +137,36 @@ export default function PassengerInfoPage() {
     icon: getServiceIcon(s.serviceType)
   }));
 
+  const initialPassengers = useMemo(() => {
+    return Array.from({ length: actualPassengerCount }, () => ({
+      title: "",
+      firstName: "",
+      lastName: "",
+      dob: "",
+      nationality: "Vietnam",
+      passportNumber: "",
+      passportExpiry: "",
+      baggage: "none",
+      services: [] as string[],
+      sameAsBooker: false,
+    }))
+  }, [actualPassengerCount])
+
   const form = useForm<PassengerFormValues>({
     resolver: zodResolver(passengerSchema),
     defaultValues: {
-      passengers: [{
-        title: "",
-        firstName: "",
-        lastName: "",
-        dob: "",
-        nationality: "Vietnam",
-        passportNumber: "",
-        passportExpiry: "",
-        baggage: "none",
-        services: [],
-        sameAsBooker: false,
-      }],
+      passengers: initialPassengers,
     },
     mode: "onChange",
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields } = useFieldArray({
     control: form.control,
     name: "passengers",
   })
 
   const handleSameAsBookerChange = (index: number, checked: boolean) => {
     if (checked && profile) {
-      // Tách Họ (từ đầu tiên) và Tên đệm & Tên (các từ còn lại)
       let lastName = ""
       let firstName = ""
       if (profile.fullName) {
@@ -139,7 +179,6 @@ export default function PassengerInfoPage() {
         }
       }
 
-      // Xác định danh xưng từ giới tính
       let title = ""
       if (profile.gender) {
         const g = profile.gender.toLowerCase()
@@ -150,7 +189,6 @@ export default function PassengerInfoPage() {
         }
       }
 
-      // Định dạng ngày
       const dob = profile.dateOfBirth ? profile.dateOfBirth.split("T")[0] : ""
       const passportExpiry = profile.passportExpiry ? profile.passportExpiry.split("T")[0] : ""
 
@@ -164,7 +202,6 @@ export default function PassengerInfoPage() {
         form.setValue(`passengers.${index}.passportExpiry`, passportExpiry, { shouldValidate: true })
       }
     } else {
-      // Xóa thông tin khi bỏ chọn
       form.setValue(`passengers.${index}.title`, "")
       form.setValue(`passengers.${index}.lastName`, "")
       form.setValue(`passengers.${index}.firstName`, "")
@@ -182,7 +219,6 @@ export default function PassengerInfoPage() {
   ]
 
   async function onSubmit(values: PassengerFormValues) {
-    // Tính tổng tiền cuối cùng (vé + hành lý + dịch vụ)
     const serviceTotal = values.passengers.reduce((acc, p) => {
       const baggage = baggageOptions.find(opt => opt.id === p.baggage)
       const baggageFee = baggage ? baggage.price : 0
@@ -195,31 +231,19 @@ export default function PassengerInfoPage() {
 
     const finalTotal = totalUrl + serviceTotal
 
-    try {
-      // Chỉ khóa ghế trước khi sang trang thanh toán (Late Locking)
-      if (seatsParam) {
-        const seatNumbersArray = seatsParam.split(",")
-        await flightService.holdSeats(Number(flightId), seatNumbersArray)
-      }
+    sessionStorage.setItem("draftPassengers", JSON.stringify(values.passengers))
 
-      sessionStorage.setItem("draftPassengers", JSON.stringify(values.passengers))
-
-      const params = new URLSearchParams({
-        flightId,
-        origin:        originCode,
-        destination:   destCode,
-        flightNumber,
-        total:         finalTotal.toString(),
-        service:       serviceTotal.toString(),
-        passengers:    passengerCount.toString(),
-        seats:         seatsParam,
-      })
-      navigate(`/payment?${params.toString()}`)
-    } catch (error: any) {
-      console.error("Failed to hold seats:", error)
-      alert(error.response?.data?.message || "Xin lỗi, ghế bạn chọn vừa bị người khác đặt hoặc bạn đã giữ quá nhiều ghế cùng lúc.")
-      navigate(-1) // Trở lại trang chọn ghế
-    }
+    const params = new URLSearchParams({
+      flightId,
+      origin:        originCode,
+      destination:   destCode,
+      flightNumber,
+      total:         finalTotal.toString(),
+      service:       serviceTotal.toString(),
+      passengers:    actualPassengerCount.toString(),
+      seats:         seatsParam,
+    })
+    navigate(`/payment?${params.toString()}`)
   }
 
   const watchedPassengers = useWatch({
@@ -228,7 +252,7 @@ export default function PassengerInfoPage() {
   }) || []
 
   const calculateTotal = () => {
-    let total = totalUrl // Dùng total từ URL (đã bao gồm giá vé + nâng hạng ghế)
+    let total = totalUrl
 
     watchedPassengers.forEach(p => {
       const baggage = baggageOptions.find(opt => opt.id === p.baggage)
@@ -249,24 +273,33 @@ export default function PassengerInfoPage() {
     <div className="min-h-screen bg-slate-50/50 pb-20">
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-8">
         <Stepper steps={steps} className="mb-8" />
+
+        {/* ── Countdown Timer Banner ── */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl mb-6 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Clock className="w-5 h-5 text-amber-600 animate-pulse" />
+            <span>Ghế của bạn đang được giữ trong:</span>
+            <span className="font-mono text-base font-bold text-amber-800 bg-amber-200/70 px-2.5 py-0.5 rounded">
+              {formatTimer(timeLeft)}
+            </span>
+          </div>
+          <span className="text-xs text-amber-700 hidden sm:inline">
+            Vui lòng hoàn tất thông tin và thanh toán trước khi hết giờ.
+          </span>
+        </div>
         
         <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Thông tin hành khách</h2>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                type="button" 
-                onClick={() => append({
-                  title: "", firstName: "", lastName: "", dob: "", 
-                  nationality: "Vietnam", passportNumber: "", passportExpiry: "",
-                  baggage: "none", services: [], sameAsBooker: false
-                })}
-                className="rounded-full px-4 border-primary text-primary hover:bg-primary/5"
-              >
-                + Thêm hành khách
-              </Button>
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Thông tin hành khách</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Đang đặt cho <strong>{actualPassengerCount}</strong> hành khách (Ghế: {seatNumbers.join(", ")})
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-3 py-1 bg-primary/10 text-primary rounded-full">
+                {actualPassengerCount} Ghế đã chọn
+              </span>
             </div>
 
             <Form {...form}>
@@ -276,18 +309,15 @@ export default function PassengerInfoPage() {
                     <CardHeader className="bg-slate-900 text-white py-4 px-6 flex flex-row items-center justify-between">
                       <div className="flex items-center gap-2">
                         <User className="h-5 w-5" />
-                        <CardTitle className="text-lg">Hành khách {index + 1}</CardTitle>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <span>Hành khách {index + 1}</span>
+                          {seatNumbers[index] && (
+                            <span className="text-xs font-normal bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
+                              Ghế: {seatNumbers[index]}
+                            </span>
+                          )}
+                        </CardTitle>
                       </div>
-                      {index > 0 && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => remove(index)}
-                          className="text-slate-400 hover:text-white hover:bg-white/10"
-                        >
-                          Xóa
-                        </Button>
-                      )}
                     </CardHeader>
                     <CardContent className="p-6 space-y-8">
                       {/* Checkbox Same as Booker */}
@@ -493,7 +523,7 @@ export default function PassengerInfoPage() {
                                 <div className={cn(
                                   "p-2 rounded-lg",
                                   isSelected ? "bg-primary text-white" : "bg-slate-100 text-slate-500"
-                                )}>
+                                  )}>
                                   <Icon className="h-5 w-5" />
                                 </div>
                                 <div className="flex flex-col">
@@ -510,8 +540,13 @@ export default function PassengerInfoPage() {
                 ))}
 
                 <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                  <Button variant="ghost" type="button" className="text-slate-600">
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Quay lại
+                  <Button 
+                    variant="ghost" 
+                    type="button" 
+                    onClick={() => navigate(-1)} 
+                    className="text-slate-600"
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Quay lại chọn ghế
                   </Button>
                   <Button 
                     type="submit" 
@@ -537,7 +572,7 @@ export default function PassengerInfoPage() {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-slate-300">
                   <span>Giá vé cơ bản ({fields.length}x)</span>
-                  <span>{(2800000 * fields.length).toLocaleString()}₫</span>
+                  <span>{(totalUrl).toLocaleString()}₫</span>
                 </div>
                 {watchedPassengers.map((p, idx) => {
                   const baggage = baggageOptions.find(opt => opt.id === p.baggage)

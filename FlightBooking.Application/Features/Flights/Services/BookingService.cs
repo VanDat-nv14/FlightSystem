@@ -21,11 +21,13 @@ namespace FlightBooking.Application.Features.Flights.Services
     {
         private readonly IApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly ICacheService _cache;
 
-        public BookingService(IApplicationDbContext context, IEmailService emailService)
+        public BookingService(IApplicationDbContext context, IEmailService emailService, ICacheService cache)
         {
             _context = context;
             _emailService = emailService;
+            _cache = cache;
         }
 
         public async Task<List<AdminBookingDto>> GetMyBookingsAsync(int userId)
@@ -167,6 +169,9 @@ namespace FlightBooking.Application.Features.Flights.Services
 
                         throw new BadRequestException($"Ghế {seatNumber} vừa được người khác đặt. Vui lòng chọn ghế khác.");
                     }
+
+                    // Xóa hold key khỏi Redis nếu có
+                    await _cache.RemoveAsync($"seat:hold:{request.FlightId}:{seatNumber}");
 
                     var seat = await _context.FlightSeats
                         .AsNoTracking()

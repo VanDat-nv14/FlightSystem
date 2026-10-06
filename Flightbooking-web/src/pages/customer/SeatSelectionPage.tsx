@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { flightService } from "../../services/flight.service"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Skeleton } from "../../components/ui/skeleton"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Plane, AlertCircle, ChevronRight, Users,
-  Armchair, CheckCircle2, X
+  Armchair, CheckCircle2, X, Loader2
 } from "lucide-react"
 
 // ─── Seat status mapping ─────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ function formatVnd(n: number) {
 export default function SeatSelectionPage() {
   const [searchParams] = useSearchParams()
   const navigate       = useNavigate()
+  const queryClient    = useQueryClient()
 
   const flightId       = Number(searchParams.get("flightId")) || 0
   const passengerCount = Number(searchParams.get("passengerCount")) || 1
@@ -67,7 +68,9 @@ export default function SeatSelectionPage() {
   const flightNumber   = searchParams.get("flightNumber") || ""
   const basePrice      = Number(searchParams.get("basePrice")) || 0
 
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectedIds, setSelectedIds]   = useState<number[]>([])
+  const [isHolding, setIsHolding]       = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const { data: rawSeats = [], isLoading } = useQuery<SeatData[]>({
     queryKey: ["flight-seats", flightId],
@@ -144,19 +147,43 @@ export default function SeatSelectionPage() {
     return SEAT_STYLES.available[seat.seatClass]
   }
 
-  function handleContinue() {
-    const seatNumbers = selectedSeats.map(s => s.seatNumber).join(",")
-    const params = new URLSearchParams({
-      flightId:      flightId.toString(),
-      passengerCount: passengerCount.toString(),
-      seats:          seatNumbers,
-      origin:         originCode,
-      destination:    destCode,
-      flightNumber,
-      basePrice:      basePrice.toString(),
-      total:          grandTotal.toString(),
-    })
-    navigate(`/passenger-info?${params.toString()}`)
+  async function handleContinue() {
+    if (selectedSeats.length !== passengerCount) return
+    setErrorMessage(null)
+    setIsHolding(true)
+
+    try {
+      const seatNumbersArray = selectedSeats.map(s => s.seatNumber)
+      await flightService.holdSeats(flightId, seatNumbersArray)
+
+      // Lưu thời điểm giữ chỗ (10 phút = 600,000 ms)
+      const holdExpiresAt = Date.now() + 10 * 60 * 1000
+      sessionStorage.setItem("seatHoldExpiresAt", holdExpiresAt.toString())
+      sessionStorage.setItem("heldSeats", JSON.stringify(seatNumbersArray))
+
+      const seatNumbers = seatNumbersArray.join(",")
+      const params = new URLSearchParams({
+        flightId:       flightId.toString(),
+        passengerCount: passengerCount.toString(),
+        seats:          seatNumbers,
+        origin:         originCode,
+        destination:    destCode,
+        flightNumber,
+        basePrice:      basePrice.toString(),
+        total:          grandTotal.toString(),
+      })
+      navigate(`/passenger-info?${params.toString()}`)
+    } catch (error: any) {
+      console.error("Hold seats error:", error)
+      const msg = error.response?.data?.message || "Một hoặc nhiều ghế vừa được người khác chọn. Vui lòng chọn ghế khác."
+      setErrorMessage(msg)
+      // Tải lại sơ đồ ghế mới nhất từ server
+      await queryClient.invalidateQueries({ queryKey: ["flight-seats", flightId] })
+      // Bỏ chọn các ghế đã bị giữ
+      setSelectedIds([])
+    } finally {
+      setIsHolding(false)
+    }
   }
 
   // Render a single seat cell
@@ -220,6 +247,24 @@ export default function SeatSelectionPage() {
       <div className="container px-4 md:px-8 py-6 flex flex-col lg:flex-row gap-6">
         {/* ── Left: Seat map ───────────────────────────────── */}
         <div className="flex-1 space-y-5">
+          {/* Error alert */}
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 text-sm text-red-700"
+            >
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-600" />
+              <div className="flex-1">
+                <p className="font-semibold text-red-800">Không thể giữ ghế</p>
+                <p>{errorMessage}</p>
+              </div>
+              <button onClick={() => setErrorMessage(null)} className="text-red-500 hover:text-red-700">
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+
           {/* Info bar */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 text-sm text-blue-700">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -410,12 +455,20 @@ export default function SeatSelectionPage() {
               className="w-full gap-2 bg-primary hover:bg-primary/90"
               size="lg"
               onClick={handleContinue}
-              disabled={selectedIds.length < passengerCount}
+              disabled={selectedIds.length < passengerCount || isHolding}
             >
-              {selectedIds.length < passengerCount
-                ? `Chọn thêm ${passengerCount - selectedIds.length} ghế`
-                : <>Tiếp tục <ChevronRight className="w-4 h-4" /></>
-              }
+              {isHolding ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Đang giữ ghế...
+                </>
+              ) : selectedIds.length < passengerCount ? (
+                `Chọn thêm ${passengerCount - selectedIds.length} ghế`
+              ) : (
+                <>
+                  Tiếp tục <ChevronRight className="w-4 h-4" />
+                </>
+              )}
             </Button>
 
             {selectedIds.length < passengerCount && (

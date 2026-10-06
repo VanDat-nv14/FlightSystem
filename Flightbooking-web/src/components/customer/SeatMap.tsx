@@ -166,6 +166,7 @@ function SeatButton({ seat, isSelected, onClick }: { seat: FlightSeat, isSelecte
         <p className="text-xs text-muted-foreground">Hạng: {seat.class === 'Business' ? 'Thương gia' : 'Phổ thông'}</p>
         <p className="text-xs text-muted-foreground">Vị trí: {seat.type === 'Window' ? 'Cửa sổ' : seat.type === 'Aisle' ? 'Lối đi' : 'Giữa'}</p>
         <p className="text-xs text-muted-foreground">Trạng thái: {{ Available: 'Còn trống', Occupied: 'Đã đặt', Locked: 'Đang giữ' }[seat.status] || seat.status}</p>
+        <p className="text-xs text-muted-foreground">Trạng thái: {({ Available: 'Còn trống', Occupied: 'Đã đặt', Locked: 'Đang giữ', Blocked: 'Đã khóa', Selected: 'Đang chọn' } as Record<string, string>)[seat.status] || seat.status}</p>
         <p className="text-sm font-semibold text-primary mt-1">
           {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(seat.price)}
         </p>

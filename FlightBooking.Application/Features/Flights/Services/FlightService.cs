@@ -17,11 +17,13 @@ namespace FlightBooking.Application.Features.Flights.Services
     {
         private readonly IApplicationDbContext _context;
         private readonly IJobScheduler _jobScheduler;
+        private readonly ICacheService _cache;
 
-        public FlightService(IApplicationDbContext context, IJobScheduler jobScheduler)
+        public FlightService(IApplicationDbContext context, IJobScheduler jobScheduler, ICacheService cache)
         {
             _context = context;
             _jobScheduler = jobScheduler;
+            _cache = cache;
         }
 
         private static FlightDto MapToDto(Flight f, int availableSeats) => new()
@@ -65,7 +67,6 @@ namespace FlightBooking.Application.Features.Flights.Services
                 .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
                 .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
                 .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
-                // Chỉ hiển thị chuyến bay trong tương lai và còn đặt được
                 .Where(f => f.DepartureTime.Date >= today
                          && f.Status == Domain.Enums.FlightStatus.Scheduled)
                 .OrderBy(f => f.DepartureTime)
@@ -113,27 +114,29 @@ namespace FlightBooking.Application.Features.Flights.Services
             if (request.DepartureDate.Date < DateTime.Today)
                 throw new BadRequestException("Không thể tìm kiếm chuyến bay trong ngày đã qua.");
 
-            var flights = await _context.Flights
-                .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
-                .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
-                .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
-                .Where(f =>
-                    f.Route!.OriginAirportId == request.OriginAirportId &&
-                    f.Route.DestinationAirportId == request.DestinationAirportId &&
-                    f.DepartureTime.Date == request.DepartureDate.Date &&
-                    f.Status == Domain.Enums.FlightStatus.Scheduled)
-                .OrderBy(f => f.DepartureTime)
-                .ToListAsync();
+            var cacheKey = $"search:{request.OriginAirportId}:{request.DestinationAirportId}:{request.DepartureDate:yyyyMMdd}:{request.PassengerCount}";
 
-            var result = new List<FlightDto>();
-            foreach (var f in flights)
+            return await _cache.GetOrSetAsync(cacheKey, async () =>
             {
-                var availableSeats = await _context.FlightSeats
-                    .CountAsync(s => s.FlightId == f.Id && s.Status == Domain.Enums.SeatStatus.Available);
-                if (availableSeats >= request.PassengerCount)
-                    result.Add(MapToDto(f, availableSeats));
-            }
-            return result;
+                var flights = await _context.Flights
+                    .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
+                    .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
+                    .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
+                    .Where(f =>
+                        f.Route!.OriginAirportId == request.OriginAirportId &&
+                        f.Route.DestinationAirportId == request.DestinationAirportId &&
+                        f.DepartureTime.Date == request.DepartureDate.Date &&
+                        f.Status == Domain.Enums.FlightStatus.Scheduled)
+                    .OrderBy(f => f.DepartureTime)
+                    .ToListAsync();
+
+                var availableSeatCounts = await GetAvailableSeatCountsAsync(flights.Select(f => f.Id));
+
+                return flights
+                    .Where(f => availableSeatCounts.GetValueOrDefault(f.Id) >= request.PassengerCount)
+                    .Select(f => MapToDto(f, availableSeatCounts.GetValueOrDefault(f.Id)))
+                    .ToList();
+            }, TimeSpan.FromMinutes(2)) ?? new List<FlightDto>();
         }
 
         public async Task<FlightDto> CreateAsync(CreateFlightRequest request, int? currentAirlineId = null)
@@ -214,6 +217,17 @@ namespace FlightBooking.Application.Features.Flights.Services
                 })
                 .ToListAsync();
 
+            // Gắn trạng thái Reserved cho các ghế đang bị giữ trong Redis
+            foreach (var seat in seats)
+            {
+                if (seat.Status == SeatStatus.Available)
+                {
+                    var holdKey = $"seat:hold:{flightId}:{seat.SeatNumber}";
+                    if (await _cache.ExistsAsync(holdKey))
+                        seat.Status = SeatStatus.Reserved;
+                }
+            }
+
             return seats;
         }
 
@@ -222,7 +236,6 @@ namespace FlightBooking.Application.Features.Flights.Services
             var flight = await _context.Flights.FindAsync(id)
                 ?? throw new NotFoundException("Flight", id);
 
-            // Kiểm tra đúng: có Ticket nào gắn với ghế của chuyến này không
             var hasBookings = await _context.FlightSeats
                 .AnyAsync(fs => fs.FlightId == id &&
                                 _context.Tickets.Any(t => t.FlightSeatId == fs.Id));
@@ -235,55 +248,40 @@ namespace FlightBooking.Application.Features.Flights.Services
 
         public async Task<bool> HoldSeatsAsync(int flightId, List<string> seatNumbers)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            // 1. Validate ghế tồn tại và đang Available trong DB
+            var seats = await _context.FlightSeats
+                .Where(s => s.FlightId == flightId && seatNumbers.Contains(s.SeatNumber))
+                .ToListAsync();
+
+            if (seats.Count != seatNumbers.Count)
+                throw new BadRequestException("Một số ghế không tồn tại.");
+
+            if (seats.Any(s => s.Status != SeatStatus.Available))
+                throw new BadRequestException("Một hoặc nhiều ghế đã được đặt bởi người khác.");
+
+            // 2. Kiểm tra xem ghế có đang bị giữ trong Redis không
+            foreach (var seatNumber in seatNumbers)
             {
-                var seats = await _context.FlightSeats
-                    .Where(s => s.FlightId == flightId && seatNumbers.Contains(s.SeatNumber))
-                    .ToListAsync();
-
-                if (seats.Count != seatNumbers.Count)
-                    throw new BadRequestException("Một số ghế không tồn tại.");
-
-                if (seats.Any(s => s.Status != SeatStatus.Available))
-                    throw new BadRequestException("Một hoặc nhiều ghế đã được đặt hoặc đang được giữ bởi người khác.");
-
-                foreach (var seat in seats)
-                {
-                    seat.Status = SeatStatus.Reserved;
-                }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                // Lên lịch Hangfire job để nhả ghế sau 10 phút
-                _jobScheduler.Schedule<IFlightService>(
-                    x => x.ReleaseHeldSeatsAsync(flightId, seatNumbers), 
-                    TimeSpan.FromMinutes(10));
-
-                return true;
+                var holdKey = $"seat:hold:{flightId}:{seatNumber}";
+                if (await _cache.ExistsAsync(holdKey))
+                    throw new BadRequestException($"Ghế {seatNumber} đang được người khác giữ. Vui lòng chọn ghế khác.");
             }
-            catch
+
+            // 3. Set Redis key TTL = 10 phút — Redis tự xóa, không cần Hangfire hay lock DB
+            foreach (var seatNumber in seatNumbers)
             {
-                await transaction.RollbackAsync();
-                throw;
+                var holdKey = $"seat:hold:{flightId}:{seatNumber}";
+                await _cache.SetAsync(holdKey, "held", TimeSpan.FromMinutes(10));
             }
+
+            return true;
         }
 
         public async Task ReleaseHeldSeatsAsync(int flightId, List<string> seatNumbers)
         {
-            // Được gọi bởi Hangfire
-            var seats = await _context.FlightSeats
-                .Where(s => s.FlightId == flightId && seatNumbers.Contains(s.SeatNumber) && s.Status == SeatStatus.Reserved)
-                .ToListAsync();
-
-            if (seats.Any())
+            foreach (var seatNumber in seatNumbers)
             {
-                foreach (var seat in seats)
-                {
-                    seat.Status = SeatStatus.Available;
-                }
-                await _context.SaveChangesAsync();
+                await _cache.RemoveAsync($"seat:hold:{flightId}:{seatNumber}");
             }
         }
 
@@ -378,22 +376,22 @@ namespace FlightBooking.Application.Features.Flights.Services
             switch (currentStatus)
             {
                 case FlightStatus.Scheduled:
-                    isValidTransition = targetStatus == FlightStatus.Boarding || 
-                                        targetStatus == FlightStatus.Delayed || 
+                    isValidTransition = targetStatus == FlightStatus.Boarding ||
+                                        targetStatus == FlightStatus.Delayed ||
                                         targetStatus == FlightStatus.Cancelled;
                     break;
                 case FlightStatus.Boarding:
-                    isValidTransition = targetStatus == FlightStatus.InFlight || 
-                                        targetStatus == FlightStatus.Delayed || 
+                    isValidTransition = targetStatus == FlightStatus.InFlight ||
+                                        targetStatus == FlightStatus.Delayed ||
                                         targetStatus == FlightStatus.Cancelled;
                     break;
                 case FlightStatus.InFlight:
-                    isValidTransition = targetStatus == FlightStatus.Completed || 
+                    isValidTransition = targetStatus == FlightStatus.Completed ||
                                         targetStatus == FlightStatus.Delayed;
                     break;
                 case FlightStatus.Delayed:
-                    isValidTransition = targetStatus == FlightStatus.Scheduled || 
-                                        targetStatus == FlightStatus.Boarding || 
+                    isValidTransition = targetStatus == FlightStatus.Scheduled ||
+                                        targetStatus == FlightStatus.Boarding ||
                                         targetStatus == FlightStatus.Cancelled;
                     break;
             }
@@ -415,7 +413,7 @@ namespace FlightBooking.Application.Features.Flights.Services
                 .Include(f => f.Route).ThenInclude(r => r!.OriginAirport)
                 .Include(f => f.Route).ThenInclude(r => r!.DestinationAirport)
                 .Include(f => f.Aircraft).ThenInclude(a => a!.Airline)
-                .Where(f => (f.Route!.OriginAirport!.Code == airportCode || f.Route.DestinationAirport!.Code == airportCode) 
+                .Where(f => (f.Route!.OriginAirport!.Code == airportCode || f.Route.DestinationAirport!.Code == airportCode)
                             && f.DepartureTime.Date == today)
                 .ToListAsync();
 

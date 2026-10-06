@@ -159,6 +159,14 @@ builder.Services.AddHangfire(configuration => configuration
 builder.Services.AddHangfireServer();
 builder.Services.AddSingleton<IJobScheduler, HangfireJobScheduler>();
 
+// ── 6b. Redis Distributed Cache ──────────────────────────────────────────
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "SkyBooking:";
+});
+builder.Services.AddScoped<ICacheService, CacheService>();
+
 // ── 7. Application Services ───────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
