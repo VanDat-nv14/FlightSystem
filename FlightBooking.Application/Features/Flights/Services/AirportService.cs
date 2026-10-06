@@ -10,10 +10,13 @@ namespace FlightBooking.Application.Features.Flights.Services
     public class AirportService : IAirportService
     {
         private readonly IApplicationDbContext _context;
+        private readonly ICacheService _cache;
+        private const string AirportsCacheKey = "airports:all";
 
-        public AirportService(IApplicationDbContext context)
+        public AirportService(IApplicationDbContext context, ICacheService cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         public async Task<AirportDto> CreateAsync(CreateAirportRequest request)
@@ -34,6 +37,7 @@ namespace FlightBooking.Application.Features.Flights.Services
             };
             _context.Airports.Add(airport);
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirportsCacheKey);
             return await GetByIdAsync(airport.Id);
         }
 
@@ -48,28 +52,32 @@ namespace FlightBooking.Application.Features.Flights.Services
 
             _context.Airports.Remove(airport);
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirportsCacheKey);
             return true;
         }
 
         public async Task<List<AirportDto>> GetAllAsync()
         {
-            return await _context.Airports
-                .Select(a => new AirportDto
-                {
-                    Id = a.Id,
-                    Name = a.Name,
-                    Code = a.Code,
-                    City = a.City,
-                    Country = a.Country,
-                    IsFeatured = a.IsFeatured,
-                    FeaturedImageUrl = a.FeaturedImageUrl,
-                    FeaturedDescription = a.FeaturedDescription,
-                    FeaturedDisplayOrder = a.FeaturedDisplayOrder
-                })
-                .OrderByDescending(a => a.IsFeatured)
-                .ThenBy(a => a.FeaturedDisplayOrder)
-                .ThenBy(a => a.Code)
-                .ToListAsync();
+            return await _cache.GetOrSetAsync(
+                AirportsCacheKey,
+                async () => await _context.Airports
+                    .Select(a => new AirportDto
+                    {
+                        Id = a.Id,
+                        Name = a.Name,
+                        Code = a.Code,
+                        City = a.City,
+                        Country = a.Country,
+                        IsFeatured = a.IsFeatured,
+                        FeaturedImageUrl = a.FeaturedImageUrl,
+                        FeaturedDescription = a.FeaturedDescription,
+                        FeaturedDisplayOrder = a.FeaturedDisplayOrder
+                    })
+                    .OrderByDescending(a => a.IsFeatured)
+                    .ThenBy(a => a.FeaturedDisplayOrder)
+                    .ThenBy(a => a.Code)
+                    .ToListAsync(),
+                TimeSpan.FromHours(1)) ?? new List<AirportDto>();
         }
 
         public async Task<AirportDto> GetByIdAsync(int id)
@@ -104,6 +112,7 @@ namespace FlightBooking.Application.Features.Flights.Services
             airport.FeaturedDescription = request.FeaturedDescription;
             airport.FeaturedDisplayOrder = request.FeaturedDisplayOrder;
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirportsCacheKey);
             return true;
         }
     }

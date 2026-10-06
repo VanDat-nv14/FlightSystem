@@ -11,27 +11,33 @@ namespace FlightBooking.Application.Features.Flights.Services
     public class AirlineService : IAirlineService
     {
         private readonly IApplicationDbContext _context;
+        private readonly ICacheService _cache;
+        private const string AirlinesCacheKey = "airlines:all";
 
-        public AirlineService(IApplicationDbContext context)
+        public AirlineService(IApplicationDbContext context, ICacheService cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         public async Task<List<AirlineDto>> GetAllAsync()
         {
-            return await _context.Airlines
-                .Include(a => a.Aircrafts)
-                .Select(a => new AirlineDto
-                {
-                    Id = a.Id,
-                    Code = a.Code,
-                    Name = a.Name,
-                    LogoUrl = a.LogoUrl,
-                    Country = a.Country,
-                    IsActive = a.IsActive,
-                    Status = a.Status.ToString(),
-                    AircraftCount = a.Aircrafts != null ? a.Aircrafts.Count : 0
-                }).ToListAsync();
+            return await _cache.GetOrSetAsync(
+                AirlinesCacheKey,
+                async () => await _context.Airlines
+                    .Include(a => a.Aircrafts)
+                    .Select(a => new AirlineDto
+                    {
+                        Id = a.Id,
+                        Code = a.Code,
+                        Name = a.Name,
+                        LogoUrl = a.LogoUrl,
+                        Country = a.Country,
+                        IsActive = a.IsActive,
+                        Status = a.Status.ToString(),
+                        AircraftCount = a.Aircrafts != null ? a.Aircrafts.Count : 0
+                    }).ToListAsync(),
+                TimeSpan.FromMinutes(30)) ?? new List<AirlineDto>();
         }
 
         public async Task<AirlineDto> GetByIdAsync(int id)
@@ -76,6 +82,7 @@ namespace FlightBooking.Application.Features.Flights.Services
 
             _context.Airlines.Add(airline);
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirlinesCacheKey);
             return await GetByIdAsync(airline.Id);
         }
 
@@ -90,6 +97,7 @@ namespace FlightBooking.Application.Features.Flights.Services
             airline.IsActive = request.IsActive;
 
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirlinesCacheKey);
             return true;
         }
 
@@ -105,6 +113,7 @@ namespace FlightBooking.Application.Features.Flights.Services
             airline.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirlinesCacheKey);
             return await GetByIdAsync(airlineId);
         }
 
@@ -121,6 +130,7 @@ namespace FlightBooking.Application.Features.Flights.Services
             airline.IsActive = newStatus == AirlineStatus.Approved;
 
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirlinesCacheKey);
             return true;
         }
 
@@ -134,6 +144,7 @@ namespace FlightBooking.Application.Features.Flights.Services
 
             _context.Airlines.Remove(airline);
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(AirlinesCacheKey);
             return true;
         }
     }
