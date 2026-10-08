@@ -97,5 +97,9 @@ export const flightService = {
   updateStatus: async (id: number, status: string, delayReason?: string): Promise<Flight> => {
     const response = await apiClient.post<{ data: Flight, message: string }>(`/Flight/${id}/status`, { status, delayReason });
     return response.data.data;
-  }
+  },
+
+  releaseSeats: async (flightId: number, seatNumbers: string[]): Promise<void> => {
+    await apiClient.post(`/Flight/${flightId}/release-seats`, seatNumbers);
+  },
 };

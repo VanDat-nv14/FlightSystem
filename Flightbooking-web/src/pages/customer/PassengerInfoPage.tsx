@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { bookingExtrasService } from "../../services/booking-extras.service"
 import { accountService } from "../../services/account.service"
+import { flightService } from "../../services/flight.service"
 import { useAuthStore } from "../../stores/useAuthStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -543,7 +544,23 @@ export default function PassengerInfoPage() {
                   <Button 
                     variant="ghost" 
                     type="button" 
-                    onClick={() => navigate(-1)} 
+                    onClick={async () => {
+                      // Nhả ghế trên server trước khi quay lại
+                      const heldSeats = sessionStorage.getItem("heldSeats")
+                      if (flightId && heldSeats) {
+                        try {
+                          const parsed: string[] = JSON.parse(heldSeats)
+                          if (parsed.length > 0) {
+                            await flightService.releaseSeats(Number(flightId), parsed)
+                          }
+                        } catch {
+                          // ignore — ghế sẽ tự hết hạn sau 10 phút trên Redis
+                        }
+                      }
+                      sessionStorage.removeItem("seatHoldExpiresAt")
+                      sessionStorage.removeItem("heldSeats")
+                      navigate(-1)
+                    }}
                     className="text-slate-600"
                   >
                     <ChevronLeft className="mr-2 h-4 w-4" /> Quay lại chọn ghế

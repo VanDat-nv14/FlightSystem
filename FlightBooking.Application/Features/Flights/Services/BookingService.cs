@@ -22,12 +22,18 @@ namespace FlightBooking.Application.Features.Flights.Services
         private readonly IApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly ICacheService _cache;
+        private readonly ISeatNotifier? _seatNotifier;
 
-        public BookingService(IApplicationDbContext context, IEmailService emailService, ICacheService cache)
+        public BookingService(
+            IApplicationDbContext context,
+            IEmailService emailService,
+            ICacheService cache,
+            ISeatNotifier? seatNotifier = null)
         {
             _context = context;
             _emailService = emailService;
             _cache = cache;
+            _seatNotifier = seatNotifier;
         }
 
         public async Task<List<AdminBookingDto>> GetMyBookingsAsync(int userId)
@@ -281,6 +287,20 @@ namespace FlightBooking.Application.Features.Flights.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                // Phát SignalR thông báo ghế đã được đặt thành công
+                if (_seatNotifier != null)
+                {
+                    try
+                    {
+                        var bookedSeatNumbers = request.Passengers.Select(p => p.SeatNumber).ToList();
+                        await _seatNotifier.NotifySeatBookedAsync(request.FlightId, bookedSeatNumbers);
+                    }
+                    catch
+                    {
+                        // SignalR không ảnh hưởng luồng chính
+                    }
+                }
 
                 // Gửi email xác nhận đặt vé (ngoài transaction để tránh ảnh hưởng luồng chính nếu lỗi gửi mail)
                 try

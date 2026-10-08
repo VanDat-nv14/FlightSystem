@@ -118,5 +118,19 @@ namespace FlightBooking.API.Controllers.Flights
                 return ErrorResponse(ex.Message, 400);
             }
         }
+
+        [HttpPost("{id}/release-seats")]
+        public async Task<IActionResult> ReleaseSeats(int id, [FromBody] List<string> seatNumbers)
+        {
+            try
+            {
+                await _flightService.ReleaseHeldSeatsAsync(id, seatNumbers);
+                return OkResponse(true, "Nhả ghế thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ErrorResponse(ex.Message, 400);
+            }
+        }
     }
 }
