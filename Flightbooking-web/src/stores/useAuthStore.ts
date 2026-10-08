@@ -55,11 +55,15 @@ export const useAuthStore = create<AuthState>()(
       }),
     }),
     {
-      name: 'auth-storage', // Lưu vào localStorage với key này
-      // Chỉ lưu trữ user và trạng thái đăng nhập, loại bỏ accessToken và refreshToken để bảo mật
+      name: 'auth-storage',
+      // Persist token để sau khi reload trang vẫn giữ session
+      // accessToken được lưu vào localStorage; với HTTPS và SameSite cookie
+      // thì đây là cách đơn giản nhất cho dev environment
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
     }
   )

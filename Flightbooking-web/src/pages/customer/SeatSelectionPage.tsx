@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { flightService } from "../../services/flight.service"
+import { useSeatHub } from "../../hooks/useSeatHub"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -76,7 +77,73 @@ export default function SeatSelectionPage() {
     queryKey: ["flight-seats", flightId],
     queryFn: () => flightService.getSeats(flightId),
     enabled: flightId > 0,
+    staleTime: 0,           // Luôn fetch lại khi vào trang — tránh cache ghế đã lock
+    refetchOnMount: "always",
   })
+
+  // Lắng nghe cập nhật ghế thời gian thực qua SignalR
+  useSeatHub({
+    flightId,
+    onSeatHeld: (_fId, seatNumbers) => {
+      queryClient.setQueryData<SeatData[]>(["flight-seats", flightId], old => {
+        if (!old) return old
+        return old.map(seat =>
+          seatNumbers.includes(seat.seatNumber) ? { ...seat, status: 1 } : seat
+        )
+      })
+      setSelectedIds(prev => {
+        const heldSeatIds = rawSeats
+          .filter(s => seatNumbers.includes(s.seatNumber))
+          .map(s => s.id)
+        return prev.filter(id => !heldSeatIds.includes(id))
+      })
+    },
+    onSeatReleased: (_fId, seatNumbers) => {
+      queryClient.setQueryData<SeatData[]>(["flight-seats", flightId], old => {
+        if (!old) return old
+        return old.map(seat =>
+          seatNumbers.includes(seat.seatNumber) ? { ...seat, status: 0 } : seat
+        )
+      })
+    },
+    onSeatBooked: (_fId, seatNumbers) => {
+      queryClient.setQueryData<SeatData[]>(["flight-seats", flightId], old => {
+        if (!old) return old
+        return old.map(seat =>
+          seatNumbers.includes(seat.seatNumber) ? { ...seat, status: 2 } : seat
+        )
+      })
+      setSelectedIds(prev => {
+        const bookedSeatIds = rawSeats
+          .filter(s => seatNumbers.includes(s.seatNumber))
+          .map(s => s.id)
+        return prev.filter(id => !bookedSeatIds.includes(id))
+      })
+    },
+  })
+
+  // Khi user quay lại trang chọn ghế (bao gồm nút Back trình duyệt),
+  // tự động nhả ghế đang giữ từ phiên trước
+  useEffect(() => {
+    const stored = sessionStorage.getItem("heldSeats")
+    if (!stored || !flightId) return
+    try {
+      const parsed: string[] = JSON.parse(stored)
+      if (parsed.length > 0) {
+        flightService.releaseSeats(flightId, parsed)
+          .catch(() => {})
+          .finally(() => {
+            sessionStorage.removeItem("heldSeats")
+            sessionStorage.removeItem("seatHoldExpiresAt")
+            queryClient.invalidateQueries({ queryKey: ["flight-seats", flightId] })
+          })
+      }
+    } catch {
+      sessionStorage.removeItem("heldSeats")
+      sessionStorage.removeItem("seatHoldExpiresAt")
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flightId])
 
   const seats: ProcessedSeat[] = useMemo(() =>
     rawSeats.map(s => {

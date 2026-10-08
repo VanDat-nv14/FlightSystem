@@ -18,12 +18,18 @@ namespace FlightBooking.Application.Features.Flights.Services
         private readonly IApplicationDbContext _context;
         private readonly IJobScheduler _jobScheduler;
         private readonly ICacheService _cache;
+        private readonly ISeatNotifier? _seatNotifier;
 
-        public FlightService(IApplicationDbContext context, IJobScheduler jobScheduler, ICacheService cache)
+        public FlightService(
+            IApplicationDbContext context,
+            IJobScheduler jobScheduler,
+            ICacheService cache,
+            ISeatNotifier? seatNotifier = null)
         {
             _context = context;
             _jobScheduler = jobScheduler;
             _cache = cache;
+            _seatNotifier = seatNotifier;
         }
 
         private static FlightDto MapToDto(Flight f, int availableSeats) => new()
@@ -274,6 +280,18 @@ namespace FlightBooking.Application.Features.Flights.Services
                 await _cache.SetAsync(holdKey, "held", TimeSpan.FromMinutes(10));
             }
 
+            if (_seatNotifier != null)
+            {
+                try
+                {
+                    await _seatNotifier.NotifySeatHeldAsync(flightId, seatNumbers);
+                }
+                catch
+                {
+                    // Tránh làm hỏng luồng đặt chỗ nếu SignalR gặp lỗi
+                }
+            }
+
             return true;
         }
 
@@ -282,6 +300,18 @@ namespace FlightBooking.Application.Features.Flights.Services
             foreach (var seatNumber in seatNumbers)
             {
                 await _cache.RemoveAsync($"seat:hold:{flightId}:{seatNumber}");
+            }
+
+            if (_seatNotifier != null)
+            {
+                try
+                {
+                    await _seatNotifier.NotifySeatReleasedAsync(flightId, seatNumbers);
+                }
+                catch
+                {
+                    // Tránh làm gián đoạn nếu SignalR gặp sự cố
+                }
             }
         }
 

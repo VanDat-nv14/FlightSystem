@@ -12,6 +12,8 @@ using FlightBooking.Application.Features.Services.Services;
 using FlightBooking.Application.Features.Promotions.Interfaces;
 using FlightBooking.Application.Features.Promotions.Services;
 using FlightBooking.Application.Common.Interfaces;
+using FlightBooking.API.Hubs;
+using FlightBooking.API.Services;
 using FlightBooking.Domain.Entities.Users;
 using FlightBooking.Infrastructure.Persistence;
 using FlightBooking.Infrastructure.Persistence.Seed;
@@ -133,16 +135,22 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientId = builder.Configuration["Google:ClientId"]!;
     googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
     googleOptions.SignInScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme;
-    googleOptions.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
+    // Fix "Correlation failed" - correlation cookie phải có thể đọc được và không bị block bởi SameSite
+    googleOptions.CorrelationCookie.HttpOnly  = false;
+    googleOptions.CorrelationCookie.SameSite  = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
     googleOptions.CorrelationCookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
         : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+    googleOptions.CorrelationCookie.IsEssential = true;
     googleOptions.ClaimActions.MapJsonKey("urn:google:picture", "picture");
 });
 builder.Services.Configure<CookiePolicyOptions>(options =>
 {
-    options.CheckConsentNeeded = context => false; // Quan trọng: Nếu để true, cookie oauth (correlation) sẽ bị block
-    options.MinimumSameSitePolicy = SameSiteMode.Unspecified; 
+    options.CheckConsentNeeded = context => false;
+    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+    options.Secure = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
 });
 
 // ── 6. Authorization ──────────────────────────────────────────────────────
@@ -188,12 +196,20 @@ builder.Services.AddScoped<ICustomerFavoriteService, CustomerFavoriteService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<FlightBooking.Application.Features.Services.Interfaces.IServicesService, ServicesService>();
 
+// ── 7b. Realtime Seat Map (SignalR) ───────────────────────────────────────
+builder.Services.AddSignalR();
+builder.Services.AddScoped<ISeatNotifier, SeatNotifier>();
+
 // ── 8. CORS ───────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+        policy.WithOrigins(
+                    "http://localhost:5173",
+                    "https://localhost:5173",
+                    "http://localhost:3000",
+                    "https://localhost:3000")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -239,7 +255,7 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-app.UseCookiePolicy();
+app.UseCookiePolicy();   // ← PHẢI đặt TRƯỚC CORS và Authentication để OAuth cookies hoạt động
 
 app.UseCors("AllowFrontend");
 
@@ -272,5 +288,6 @@ RecurringJob.AddOrUpdate<ICancellationService>(
     "*/30 * * * *"); // every 30 minutes
 
 app.MapControllers();
+app.MapHub<SeatHub>("/hubs/seats");
 
 app.Run();
